@@ -1,0 +1,23 @@
+# ビルドの結果
+target/
+
+# Eclipse の設定（各自のPCごとに違う）
+.metadata/
+.settings/
+.project
+.classpath
+.factorypath
+bin/
+
+# ロゴ（企業から使用許可をもらっているが、公開リポジトリには置かない。10_基本設計書 5.4）
+src/main/resources/static/images/logo.png
+
+# ログ・バックアップ・OSのファイル
+*.log
+*.sql.bak
+backup/
+Thumbs.db
+.DS_Store
+
+# VS Code は使わない（91_コーディング規約 1章）が、誤って作られたときのため
+.vscode/
