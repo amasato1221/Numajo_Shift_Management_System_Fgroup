@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-03 |
-| 版 | 第1.0版（令和8年10月21日） |
+| 版 | 第1.1版（令和8年10月22日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -11,6 +11,7 @@
 | 版 | 日付 | 内容 | 作成者 |
 | --- | --- | --- | --- |
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
+| 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：ShiftAssignmentRepository#countAssignedFrom を追加（M7）。条件4つのメソッド名クエリを例外として明記（L2） | 新井 |
 
 このページのコードは**全文**です。そのまま写してください（30-00 1章）。
 
@@ -19,7 +20,7 @@
 | 決まり | 内容 |
 | --- | --- |
 | 形 | `JpaRepository<エンティティ, 主キーの型>` を継承したインターフェース |
-| メソッド名から作るクエリ | 条件が2つまでで、`JOIN FETCH` がいらないものだけ（例：`existsByLoginId`） |
+| メソッド名から作るクエリ | 条件が2つまでで、`JOIN FETCH` がいらないものだけ（例：`existsByLoginId`）。**例外：** `NotificationRepository#existsByUserIdAndTypeAndLinkUrlAndCreatedAtGreaterThanEqual`（条件4つ）。すべて「＝」か「以上」だけで読み違えがなく、検証用プロジェクトで動作を確かめたため、このまま使う。これ以外に条件3つ以上のものを足すときは `@Query` にする |
 | `@Query` | それ以外はすべて JPQL で書く。ネイティブSQL（`nativeQuery = true`）は使わない |
 | 列挙型の定数 | JPQL の中では `jp.numajo.fgroup.shift.constant.PeriodStatus.PUBLISHED` のように完全な名前で書く |
 | LIKE | エスケープ文字は `!`（`ESCAPE '!'`）。値は `LikeUtil.contains(keyword)` で作る（MySQL では `\` が特別な意味を持つため使わない） |
@@ -535,6 +536,14 @@ public interface ShiftAssignmentRepository extends JpaRepository<ShiftAssignment
 
     /** 期間の状態ごとの件数（公開時の操作ログ）。 */
     long countByPeriodIdAndStatus(Long periodId, AssignmentStatus status);
+
+    /** その人の、今日以降の ASSIGNED の割当の件数（SM-03 で無効にしたときの警告）。 */
+    @Query("""
+            SELECT COUNT(a) FROM ShiftAssignment a
+            WHERE a.user.id = :userId AND a.workDate >= :today
+              AND a.status = jp.numajo.fgroup.shift.constant.AssignmentStatus.ASSIGNED
+            """)
+    long countAssignedFrom(@Param("userId") Long userId, @Param("today") LocalDate today);
 }
 ```
 

@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-04 |
-| 版 | 第1.0版（令和8年10月21日） |
+| 版 | 第1.1版（令和8年10月22日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -11,6 +11,7 @@
 | 版 | 日付 | 内容 | 作成者 |
 | --- | --- | --- | --- |
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
+| 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：LoginFailureHandler でロック中の試行を LOGIN_FAILURE にした（M1。単体テスト8件で確認）。無効化したときの Cookie の要確認事項を追加（M2） | 新井 |
 
 このページのコードは**全文**です。そのまま写してください（30-00 1章）。動きの説明は 20-SC-01 と 94_セキュリティ設計書にあります。
 
@@ -25,7 +26,7 @@
 | 5回失敗でロック、ロック中は正しいパスワードでも入れない、ちょうど解除時刻になったら入れる |
 | 存在しないID・無効なアカウントは「IDまたはパスワードが違います」 |
 | ログイン成功・失敗・ロック・ログアウトが操作ログに残る |
-| ログイン中に無効にされたら、次の操作で `/login?disabled` へ |
+| ログイン中に無効にされたら、次の操作で `/login?disabled` へ（リダイレクト先まで。画面に W0102 が出るところまでは確かめていない。下の「要確認」） |
 | パスワード変更が必要なときに開けるのは、SC-03・ログアウト・静的ファイル・エラー画面だけ |
 
 ## 0.1 フィルターの順番
@@ -34,6 +35,15 @@
 … → UsernamePasswordAuthenticationFilter（ログイン） → … →
 UserActiveCheckFilter（無効ならログアウト） → PasswordChangeRequiredFilter（初回の変更を強制） →
 AuthorizationFilter（URLの権限） → コントローラー
+```
+
+**要確認（第1.1版で追加）：** `UserActiveCheckFilter` はセッションを無効にしますが、`JSESSIONID` の Cookie は消しません。`SecurityConfig` に `invalidSessionUrl("/login?expired")` があるため、ブラウザが `/login?disabled` を開くときに古いセッション ID を送ると、W0102 ではなく W0101（時間切れ）の画面に飛ばされる恐れがあります。結合テスト（94_セキュリティ設計書 6章 No.8）で、**最終的に画面に W0102 が出るか**まで確かめます。W0101 が出たときは、新井に連絡したうえで、`UserActiveCheckFilter` の `sendRedirect` の前に次の4行を足します（`jakarta.servlet.http.Cookie` を import）。
+
+```java
+            Cookie cookie = new Cookie("JSESSIONID", null);
+            cookie.setPath(request.getContextPath().isEmpty() ? "/" : request.getContextPath());
+            cookie.setMaxAge(0);
+            response.addCookie(cookie);
 ```
 
 `UserActiveCheckFilter` と `PasswordChangeRequiredFilter` は `@Component` にしてはいけません（Spring Boot が通常のフィルターとしても登録し、2回動くため）。`SecurityConfig` の中で `new` します。
@@ -357,6 +367,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * ログイン失敗時の処理。ロック中は /login?locked、それ以外は /login?error へ戻す。
+ * 操作ログの LOGIN_LOCKED は、今回の失敗でロックしたときだけ残す（ロック中の試行は LOGIN_FAILURE）。
  */
 @Component
 @RequiredArgsConstructor
@@ -371,14 +382,16 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException exception) throws IOException {
         String loginId = request.getParameter("loginId");
-        boolean locked = exception instanceof LockedException;
+        boolean alreadyLocked = exception instanceof LockedException;
+        boolean lockedNow = false;
         if (exception instanceof BadCredentialsException && loginId != null && !loginId.isEmpty()) {
-            locked = loginAttemptService.loginFailed(loginId, LocalDateTime.now(clock));
+            lockedNow = loginAttemptService.loginFailed(loginId, LocalDateTime.now(clock));
         }
         Long userId = loginId == null ? null : userRepository.findByLoginId(loginId).map(User::getId).orElse(null);
         operationLogService.recordInNewTransaction(userId,
-                locked ? OperationAction.LOGIN_LOCKED : OperationAction.LOGIN_FAILURE,
+                lockedNow ? OperationAction.LOGIN_LOCKED : OperationAction.LOGIN_FAILURE,
                 "loginId:" + abbreviate(loginId), null);
+        boolean locked = lockedNow || alreadyLocked;
         response.sendRedirect(request.getContextPath() + (locked ? "/login?locked" : "/login?error"));
     }
 

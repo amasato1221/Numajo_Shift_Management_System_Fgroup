@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-05 |
-| 版 | 第1.0版（令和8年10月21日） |
+| 版 | 第1.1版（令和8年10月22日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -11,6 +11,7 @@
 | 版 | 日付 | 内容 | 作成者 |
 | --- | --- | --- | --- |
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
+| 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：StaffService#update の戻り値を int にし、ShiftWarningService#calculate に today を追加（M7） | 新井 |
 
 ## 0. service の決まり
 
@@ -151,7 +152,7 @@
 
 ### 3.2 `StaffService`
 
-依存：`UserRepository`、`SkillRepository`、`PasswordEncoder`、`PasswordGenerator`、`NotificationSettingService`、`CalendarFeedService`、`OperationLogService`、`Clock`
+依存：`UserRepository`、`SkillRepository`、`ShiftAssignmentRepository`、`PasswordEncoder`、`PasswordGenerator`、`NotificationSettingService`、`CalendarFeedService`、`OperationLogService`、`Clock`
 
 | メソッド | Tx | 手順 |
 | --- | --- | --- |
@@ -159,7 +160,7 @@
 | `StaffCreatedResult create(StaffForm form, Long operatorId)` | 更新 | 20-SM-03 2.2 |
 | `StaffForm getForEdit(Long id)` | 読取 | 20-SM-03 2.3 |
 | `StaffDetailView getDetail(Long id)` | 読取 | 20-SM-03 2.3 |
-| `void update(Long id, StaffForm form, Long operatorId)` | 更新 | 20-SM-03 2.4 |
+| `int update(Long id, StaffForm form, Long operatorId)` | 更新 | 20-SM-03 2.4。戻り値は、有効から無効に変えたときの今日以降の ASSIGNED の割当の件数（それ以外は 0） |
 | `String resetPassword(Long id, Long operatorId)` | 更新 | 20-SM-03 2.5 |
 
 ### 3.3 `SkillService`
@@ -223,12 +224,12 @@
 
 ### 3.7 `ShiftWarningService`
 
-依存：`ShiftAssignmentRepository`、`SlotRepository`、`RequiredStaffService`
+依存：`ShiftAssignmentRepository`、`SlotRepository`、`RequiredStaffService`、`Clock`
 
 | メソッド | Tx | 手順 |
 | --- | --- | --- |
 | `List<ShiftWarning> calculate(ShiftPeriod period)` | 読取 | 必要なデータを取ってから下のメソッドを呼ぶ |
-| `List<ShiftWarning> calculate(ShiftPeriod period, List<Slot> slots, List<ShiftAssignment> assignments, Map<LocalDate, Map<Byte, Integer>> required)` | － | 20-SM-06 4章（DBを使わない。単体テストはこのメソッドで行う） |
+| `List<ShiftWarning> calculate(ShiftPeriod period, List<Slot> slots, List<ShiftAssignment> assignments, Map<LocalDate, Map<Byte, Integer>> required, LocalDate today)` | － | 20-SM-06 4章（DBを使わない。単体テストはこのメソッドで行う） |
 | `int countFor(LocalDate date, Slot slot)` | 読取 | その日・その枠と重なる ASSIGNED の数（`findAssignedByWorkDate`） |
 
 ### 3.8 `AbsenceService`
