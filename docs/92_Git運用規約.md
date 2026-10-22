@@ -179,6 +179,7 @@ feat: シフト希望の提出と取り消しを作成
 5. GitHub でプルリクエストを作る（宛先は `main`）
 6. 新井の確認を受け、指摘があれば直してプッシュする
 7. 新井が確認して「Squash and merge」でマージする（ブランチは自動で消える）。新井以外はマージできない（2.3）
+   - マージの画面には「Merging is blocked」と出ますが、設定どおりです。新井は「Merge without waiting for requirements to be met (bypass rules)」にチェックを入れてマージします
 
 作業中に `main` が進んだときは、自分のブランチに `main` を取り込みます：`git pull origin main`（マージ）。**ほかの人とも使っているブランチで `rebase` や `push --force` をしてはいけません。**
 
