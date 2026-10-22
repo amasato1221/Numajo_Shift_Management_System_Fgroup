@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-07 |
-| 版 | 第1.0版（令和8年10月21日） |
+| 版 | 第1.1版（令和8年10月22日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -11,6 +11,7 @@
 | 版 | 日付 | 内容 | 作成者 |
 | --- | --- | --- | --- |
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
+| 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：RequestPageView に submissionState・statusLabel を追加（H2） | 新井 |
 
 ## 1. form の決まり
 
@@ -90,7 +91,7 @@ public class SkillForm {
 | `NextShiftView` | `LocalDate workDate, ShiftBadge badge, LocalTime startTime, LocalTime endTime` | `StaffHomeService` |
 | `StaffHomeView` | `NextShiftView nextShift, List<PeriodOption> unsubmittedPeriods, List<NoticeRow> latestNotices, MonthCalendar calendar` | `StaffHomeService` |
 | `RequestDayRow` | `LocalDate workDate, boolean dayQualified, boolean eveningQualified` | `ShiftRequestService` |
-| `RequestPageView` | `PeriodOption period, List<PeriodOption> periodOptions, boolean editable, LocalDateTime submittedAt, List<RequestDayRow> days, String staffName` | `ShiftRequestService` |
+| `RequestPageView` | `PeriodOption period, List<PeriodOption> periodOptions, boolean editable, LocalDateTime submittedAt, SubmissionState submissionState, String statusLabel, List<RequestDayRow> days, String staffName` | `ShiftRequestService` |
 | `ShiftTableRow` | `Long userId, String name, boolean trainee, Map<LocalDate, List<ShiftBadge>> cells, int workDays` | `ShiftTableService` |
 | `ShiftTable` | `List<LocalDate> days, List<ShiftTableRow> rows` | `ShiftTableService` |
 | `ChatMessageView` | `Long id, String senderName, String body, LocalDateTime createdAt, boolean mine` | `ChatService` |

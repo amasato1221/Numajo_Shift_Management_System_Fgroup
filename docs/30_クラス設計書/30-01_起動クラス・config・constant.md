@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-01 |
-| 版 | 第1.0版（令和8年10月21日） |
+| 版 | 第1.1版（令和8年10月22日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -11,6 +11,7 @@
 | 版 | 日付 | 内容 | 作成者 |
 | --- | --- | --- | --- |
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
+| 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：PeriodStatus・NotificationType に label を追加し、SubmissionState を追加（H2）。WarningType に INACTIVE_STAFF を追加（M7） | 新井 |
 
 このページのコードは**全文**です。そのまま写してください（30-00 1章）。
 
@@ -180,13 +181,25 @@ public enum RequestMode {
 ```java
 package jp.numajo.fgroup.shift.constant;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 /**
  * 募集期間の状態（受付中・作成中・公開済み）。
  */
+@Getter
+@RequiredArgsConstructor
 public enum PeriodStatus {
-    OPEN, CLOSED, PUBLISHED
+    OPEN("受付中"),
+    CLOSED("作成中"),
+    PUBLISHED("公開済み");
+
+    /** 画面に出す日本語名（10_基本設計書 5.7） */
+    private final String label;
 }
 ```
+
+テンプレートでは `${period.status.label}` のように読みます（SB-02・SM-01・SM-06）。
 
 ### `AssignmentStatus`
 
@@ -210,11 +223,55 @@ public enum AssignmentStatus {
 ```java
 package jp.numajo.fgroup.shift.constant;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 /**
  * お知らせの種類。
  */
+@Getter
+@RequiredArgsConstructor
 public enum NotificationType {
-    DEADLINE, PUBLISHED, CHANGED, VACANCY, CHAT
+    DEADLINE("締切"),
+    PUBLISHED("公開"),
+    CHANGED("変更"),
+    VACANCY("欠員"),
+    CHAT("チャット");
+
+    /** 画面に出す日本語名（10_基本設計書 5.7） */
+    private final String label;
+}
+```
+
+`NoticeRow` の `typeLabel` には `type.getLabel()` を入れます（SC-02）。
+
+### `SubmissionState`
+
+ファイル：`src/main/java/jp/numajo/fgroup/shift/constant/SubmissionState.java`
+
+DBには保存しません。SB-03 で、表示中の期間の提出状況を出すためだけに使います。
+
+```java
+package jp.numajo.fgroup.shift.constant;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+/**
+ * シフト希望提出（SB-03）で表示する提出状況。
+ */
+@Getter
+@RequiredArgsConstructor
+public enum SubmissionState {
+    /** 受付中で、まだ提出していない */
+    NOT_SUBMITTED("未提出"),
+    /** 受付中で、提出済み */
+    SUBMITTED("提出済み"),
+    /** 受付が終わった（提出したかどうかに関係なく） */
+    CLOSED("受付終了");
+
+    /** 画面に出す日本語名（10_基本設計書 5.7） */
+    private final String label;
 }
 ```
 
@@ -249,7 +306,9 @@ public enum WarningType {
     /** 人数不足 */
     SHORTAGE,
     /** 職能不足 */
-    SKILL
+    SKILL,
+    /** 無効なスタッフの割当（今日以降） */
+    INACTIVE_STAFF
 }
 ```
 

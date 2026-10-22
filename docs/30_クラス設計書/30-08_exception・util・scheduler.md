@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-08 |
-| 版 | 第1.0版（令和8年10月21日） |
+| 版 | 第1.1版（令和8年10月22日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -11,6 +11,7 @@
 | 版 | 日付 | 内容 | 作成者 |
 | --- | --- | --- | --- |
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
+| 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：DateTimeUtil に5つの形式を追加（L4）。GlobalExceptionHandler で必須パラメーターの欠落・HTTPメソッド違いも404にした（L13）。どちらも単体テストで命令・分岐とも100%を確認 | 新井 |
 
 このページの exception と util のコードは**全文**です（scheduler は 4章の形で書きます）。そのまま写してください（30-00 1章）。
 
@@ -88,6 +89,8 @@ public class ResourceNotFoundException extends RuntimeException {
 package jp.numajo.fgroup.shift.exception;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -103,9 +106,10 @@ import lombok.extern.slf4j.Slf4j;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    /** 対象が見つからない・URLの形が違う → 404 */
+    /** 対象が見つからない・URLの形が違う・必要なパラメーターがない・HTTPメソッドが違う → 404 */
     @ExceptionHandler({ ResourceNotFoundException.class, NoResourceFoundException.class,
-            MethodArgumentTypeMismatchException.class })
+            MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class,
+            HttpRequestMethodNotSupportedException.class })
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public String notFound(Exception e) {
         log.debug("404: {}", e.getMessage());
@@ -205,6 +209,11 @@ public final class DateTimeUtil {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("H:mm");
     private static final DateTimeFormatter SHORT_DATE = DateTimeFormatter.ofPattern("M/d");
+    private static final DateTimeFormatter SHORT_YEAR_DATE = DateTimeFormatter.ofPattern("yyyy/M/d");
+    private static final DateTimeFormatter SHORT_DATE_TIME = DateTimeFormatter.ofPattern("M/d H:mm");
+    private static final DateTimeFormatter DATE_TIME_SECONDS = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+    private static final DateTimeFormatter PRINT_START = DateTimeFormatter.ofPattern("yyyy/M/d(E)", Locale.JAPANESE);
+    private static final DateTimeFormatter PRINT_END = DateTimeFormatter.ofPattern("M/d(E)", Locale.JAPANESE);
 
     private DateTimeUtil() {
     }
@@ -232,6 +241,31 @@ public final class DateTimeUtil {
     /** 例：11/1〜11/15 */
     public static String period(LocalDate start, LocalDate end) {
         return start.format(SHORT_DATE) + "〜" + end.format(SHORT_DATE);
+    }
+
+    /** 例：10/15 */
+    public static String shortDate(LocalDate date) {
+        return date.format(SHORT_DATE);
+    }
+
+    /** 例：2025/12/3 */
+    public static String shortYearDate(LocalDate date) {
+        return date.format(SHORT_YEAR_DATE);
+    }
+
+    /** 例：10/15 23:59 */
+    public static String shortDateTime(LocalDateTime dateTime) {
+        return dateTime.format(SHORT_DATE_TIME);
+    }
+
+    /** 例：2026/10/22 09:05:31 */
+    public static String dateTimeSeconds(LocalDateTime dateTime) {
+        return dateTime.format(DATE_TIME_SECONDS);
+    }
+
+    /** 印刷用の期間。例：2026/11/1(日)〜11/15(日) */
+    public static String printPeriod(LocalDate start, LocalDate end) {
+        return start.format(PRINT_START) + "〜" + end.format(PRINT_END);
     }
 
     /** 時間指定のバッジ。例：13-22、13:30-22、8-12:30 */
