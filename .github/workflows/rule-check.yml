@@ -1,0 +1,58 @@
+# プルリクエストが規約（91_コーディング規約・92_Git運用規約）に合っているかを確かめ、
+# 違反があれば PR のコメントで新井（amasato1221）に知らせる。
+# 知らせるだけで、マージは止めない（ルールセットの必須チェックにはしない。92_Git運用規約 2.3・4.3）。
+name: 規約チェック
+
+on:
+  pull_request:
+    branches: [main]
+    # edited：PR のタイトル・本文を直したときも確かめ直す
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: rule-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  rule-check:
+    name: 規約チェック
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # 知らせる管理者の GitHub ログイン名
+      RULE_CHECK_ADMIN: amasato1221
+    steps:
+      - name: リポジトリを取り出す
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # main との差分とコミットの一覧を取るため、履歴をすべて取る
+          fetch-depth: 0
+
+      - name: Python を用意する
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: チェックのスクリプトをテストする
+        run: python -m unittest discover -s .github/scripts/tests -t .github/scripts
+
+      - name: 規約を確かめる
+        run: >
+          python .github/scripts/rule_check.py
+          --event "$GITHUB_EVENT_PATH"
+          --output "$RUNNER_TEMP/rule-check.md"
+          --admin "$RULE_CHECK_ADMIN"
+
+      - name: 新井に知らせる
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          python .github/scripts/notify_pr.py
+          --event "$GITHUB_EVENT_PATH"
+          --report "$RUNNER_TEMP/rule-check.md"
