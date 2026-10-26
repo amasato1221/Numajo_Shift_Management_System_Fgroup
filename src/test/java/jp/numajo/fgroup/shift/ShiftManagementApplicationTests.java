@@ -10,11 +10,14 @@ import java.util.TimeZone;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationInfo;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.MessageSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestConstructor;
+import org.springframework.test.context.TestConstructor.AutowireMode;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * ①プロジェクト設定（pom.xml・application.yml・起動クラス・Flyway・messages.properties）の起動テスト。
@@ -26,16 +29,15 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@RequiredArgsConstructor
+@TestConstructor(autowireMode = AutowireMode.ALL)
 class ShiftManagementApplicationTests {
 
-    @Autowired
-    private Flyway flyway;
+    private final Flyway flyway;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private MessageSource messageSource;
+    private final MessageSource messageSource;
 
     @Test
     void 起動する_JVMのタイムゾーンが日本時間になる() {
