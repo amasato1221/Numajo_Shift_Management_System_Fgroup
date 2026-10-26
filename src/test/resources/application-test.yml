@@ -1,0 +1,14 @@
+# テスト用の設定（97_テスト計画書 3.1）。@ActiveProfiles("test") で読み込む
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/shift_test?connectionTimeZone=%2B09:00&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
+    username: shift_app
+    password: ${DB_PASSWORD}
+  thymeleaf:
+    cache: true
+logging:
+  level:
+    jp.numajo.fgroup.shift: INFO
+app:
+  backup:
+    dir: "${java.io.tmpdir}/shift-management-test-backup"
