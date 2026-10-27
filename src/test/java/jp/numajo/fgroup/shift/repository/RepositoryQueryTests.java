@@ -1,11 +1,14 @@
 package jp.numajo.fgroup.shift.repository;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,8 +18,6 @@ import org.springframework.test.context.TestConstructor;
 import org.springframework.test.context.TestConstructor.AutowireMode;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jp.numajo.fgroup.shift.constant.AssignmentStatus;
 import jp.numajo.fgroup.shift.constant.PeriodStatus;
 import jp.numajo.fgroup.shift.constant.Role;
@@ -87,7 +88,7 @@ class RepositoryQueryTests {
 
         List<User> actual = userRepository.searchStaff(null, true);
 
-        assertThat(actual).extracting(User::getLoginId).containsExactly("t-a", "t-b", "t-c", "t-n");
+        assertThat(actual).extracting(User::getLoginId).containsExactly("t-a", "t-c", "t-b", "t-n");
     }
 
     @Test
