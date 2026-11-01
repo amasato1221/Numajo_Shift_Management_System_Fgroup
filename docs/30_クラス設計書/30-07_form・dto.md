@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-07 |
-| 版 | 第1.1版（令和8年10月22日） |
+| 版 | 第1.2版（令和8年11月2日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -12,6 +12,7 @@
 | --- | --- | --- | --- |
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
 | 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：RequestPageView に submissionState・statusLabel を追加（H2） | 新井 |
+| 1.2 | 令和8年11月2日 | 実装中の質問（栗原）を反映：DayRequestForm#workDate に ISO 形式の指定を追加。RequestDayRow に dateLabel、RequestPageView に deadlineLabel・submittedAtLabel、StaffDetailView に updatedAtLabel・lockedUntilLabel を追加。StaffRowView の skillNames を職能名の順にした | 新井 |
 
 ## 1. form の決まり
 
@@ -54,7 +55,7 @@ public class SkillForm {
 | --- | --- | --- |
 | `PasswordChangeForm` | SC-03 | `currentPassword`（String）`@NotBlank(E0301)`／`newPassword`（String）`@NotBlank(E0302)` `@Pattern(regexp="^[\\x21-\\x7E]{8,64}$", E0303)`／`confirmPassword`（String）`@NotBlank(E0304)` |
 | `ShiftRequestForm` | SB-03、SM-06-1 | `periodId`（Long）`@NotNull(E1301)`／`days`（`List<DayRequestForm>`）`@Valid @NotEmpty(E1302)` |
-| `DayRequestForm` | SB-03、SM-06-1 | `workDate`（LocalDate）`@NotNull(E1302)`／`mode`（RequestMode）`@NotNull(E1302)`／`dayShift`（Availability）／`eveningShift`（Availability）／`startTime`（LocalTime、`@DateTimeFormat(pattern="HH:mm")`）／`endTime`（同じ） |
+| `DayRequestForm` | SB-03、SM-06-1 | `workDate`（LocalDate、`@DateTimeFormat(iso=ISO.DATE)`）`@NotNull(E1302)`／`mode`（RequestMode）`@NotNull(E1302)`／`dayShift`（Availability）／`eveningShift`（Availability）／`startTime`（LocalTime、`@DateTimeFormat(pattern="HH:mm")`）／`endTime`（同じ） |
 | `NotificationSettingForm` | SB-05 | `daysBefore`（`List<Integer>`）チェックなし（Service で E1501） |
 | `ChatForm` | SB-06、SM-11 | `body`（String）`@NotBlank(E1601)` `@Size(max=500, E1602)` |
 | `StaffForm` | SM-03 | `name`（String）`@NotBlank(E2201)` `@Size(max=50, E2202)`／`nameKana`（String）`@NotBlank(E2203)` `@Size(max=50, E2204)` `@Pattern(regexp="^[ぁ-ゖー 　]+$", E2205)`／`loginId`（String）`@NotBlank(E2206)` `@Pattern(regexp="^[A-Za-z0-9]{4,20}$", E2207)`／`skillIds`（`List<Long>`）／`trainee`（boolean）／`active`（boolean、初期値 true） |
@@ -90,8 +91,8 @@ public class SkillForm {
 | `PeriodCalendar` | `PeriodOption period, List<List<CalendarDay>> weeks` | `ShiftCalendarService` |
 | `NextShiftView` | `LocalDate workDate, ShiftBadge badge, LocalTime startTime, LocalTime endTime` | `StaffHomeService` |
 | `StaffHomeView` | `NextShiftView nextShift, List<PeriodOption> unsubmittedPeriods, List<NoticeRow> latestNotices, MonthCalendar calendar` | `StaffHomeService` |
-| `RequestDayRow` | `LocalDate workDate, boolean dayQualified, boolean eveningQualified` | `ShiftRequestService` |
-| `RequestPageView` | `PeriodOption period, List<PeriodOption> periodOptions, boolean editable, LocalDateTime submittedAt, SubmissionState submissionState, String statusLabel, List<RequestDayRow> days, String staffName` | `ShiftRequestService` |
+| `RequestDayRow` | `LocalDate workDate, String dateLabel, boolean dayQualified, boolean eveningQualified` | `ShiftRequestService` |
+| `RequestPageView` | `PeriodOption period, List<PeriodOption> periodOptions, String deadlineLabel, boolean editable, LocalDateTime submittedAt, String submittedAtLabel, SubmissionState submissionState, String statusLabel, List<RequestDayRow> days, String staffName` | `ShiftRequestService` |
 | `ShiftTableRow` | `Long userId, String name, boolean trainee, Map<LocalDate, List<ShiftBadge>> cells, int workDays` | `ShiftTableService` |
 | `ShiftTable` | `List<LocalDate> days, List<ShiftTableRow> rows` | `ShiftTableService` |
 | `ChatMessageView` | `Long id, String senderName, String body, LocalDateTime createdAt, boolean mine` | `ChatService` |
@@ -101,8 +102,8 @@ public class SkillForm {
 | `VacancyView` | `LocalDate workDate, String slotLabel, String staffName, LocalDateTime notifiedAt, int assigned, int required` | `DashboardService` |
 | `PeriodRowView` | `PeriodOption period, int submitted, int total` | `DashboardService` |
 | `DashboardView` | `List<SubmissionStatusView> submissionStatuses, List<ShortageView> shortages, int moreShortages, List<VacancyView> vacancies, List<PeriodRowView> periods` | `DashboardService` |
-| `StaffRowView` | `Long id, String name, String nameKana, String loginId, List<String> skillNames, boolean trainee, boolean active, boolean locked` | `StaffService` |
-| `StaffDetailView` | `Long id, LocalDateTime updatedAt, boolean locked, LocalDateTime lockedUntil` | `StaffService` |
+| `StaffRowView` | `Long id, String name, String nameKana, String loginId, List<String> skillNames, boolean trainee, boolean active, boolean locked`（`skillNames` は職能名の順） | `StaffService` |
+| `StaffDetailView` | `Long id, LocalDateTime updatedAt, String updatedAtLabel, boolean locked, LocalDateTime lockedUntil, String lockedUntilLabel`（`lockedUntilLabel` はロック中でなければ null） | `StaffService` |
 | `StaffCreatedResult` | `Long userId, String initialPassword` | `StaffService` |
 | `SkillRowView` | `Long id, String name, String description, long holderCount` | `SkillService` |
 | `RequiredDayView` | `LocalDate workDate, int dayCount, boolean dayOverridden, int eveningCount, boolean eveningOverridden` | `RequiredStaffService` |

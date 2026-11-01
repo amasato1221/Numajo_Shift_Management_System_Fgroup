@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-05 |
-| 版 | 第1.1版（令和8年10月22日） |
+| 版 | 第1.2版（令和8年11月2日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -12,6 +12,7 @@
 | --- | --- | --- | --- |
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
 | 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：StaffService#update の戻り値を int にし、ShiftWarningService#calculate に today を追加（M7） | 新井 |
+| 1.2 | 令和8年11月2日 | 実装中の質問（栗原）を反映：ShiftRequestService#proxySubmit の戻り値を String（対象のバイトの氏名）にし、getProxyPage の periodOptions を空のリストにした | 新井 |
 
 ## 0. service の決まり
 
@@ -123,8 +124,8 @@
 | `ShiftRequestForm toForm(Long userId, ShiftPeriod period)` | 読取 | 20-SB-03 3.1-5 |
 | `void submit(Long userId, ShiftRequestForm form)` | 更新 | 20-SB-03 3.2 |
 | `void cancel(Long userId, Long periodId)` | 更新 | 20-SB-03 3.3 |
-| `RequestPageView getProxyPage(Long periodId, Long staffUserId)` | 読取 | 20-SM-06-1 3.1 |
-| `void proxySubmit(Long periodId, Long staffUserId, ShiftRequestForm form, Long operatorId)` | 更新 | 20-SM-06-1 3.2 |
+| `RequestPageView getProxyPage(Long periodId, Long staffUserId)` | 読取 | 20-SM-06-1 3.1。`periodOptions` は空のリスト |
+| `String proxySubmit(Long periodId, Long staffUserId, ShiftRequestForm form, Long operatorId)` | 更新 | 20-SM-06-1 3.2。戻り値は対象のバイトの氏名（I2610 の引数） |
 | `Set<Byte> qualifiedSlotIds(Long userId)` | 読取 | 20-SB-03 3.1-1-3 |
 | `void validateDays(ShiftPeriod period, List<DayRequestForm> days, Set<Byte> qualified)` | － | 20-SB-03 3.2-2-3〜2-4 |
 | `void replaceRequests(ShiftPeriod period, Long userId, List<DayRequestForm> days)` | 必須 | 20-SB-03 3.2-3（package-private） |
