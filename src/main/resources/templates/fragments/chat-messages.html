@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!--
+      チャットの吹き出し（20-SB-06 1章 No.2・3、SM-11 と共用）。messages は List<ChatMessageView>（古い順）。
+      自分の発言は右・緑、相手の発言は左・白で上に送信者名。最後の吹き出しに id="latest" を付ける。
+      日時は DateTimeUtil#shortDateTime（M/d H:mm）で出す。
+    -->
+    <div th:fragment="chat(messages)" class="chat-messages">
+        <p class="text-muted" th:if="${#lists.isEmpty(messages)}" th:text="#{I1601}"></p>
+        <div th:each="m, stat : ${messages}" class="chat-row" th:classappend="${m.mine} ? 'chat-mine' : 'chat-other'"
+             th:id="${stat.last} ? 'latest'">
+            <div class="chat-sender" th:unless="${m.mine}" th:text="${m.senderName}">店長</div>
+            <div class="chat-bubble" th:text="${m.body}">本文</div>
+            <div class="chat-time"
+                 th:text="${T(jp.numajo.fgroup.shift.util.DateTimeUtil).shortDateTime(m.createdAt)}">10/15 23:59</div>
+        </div>
+    </div>
+</body>
+</html>

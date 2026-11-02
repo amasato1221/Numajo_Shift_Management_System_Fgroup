@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!--
+      シフトの表示部品（20-00 4章）。b は ShiftBadge（type、icons、timeText…）。
+      使い方：th:replace="~{fragments/shift-badge :: badge(${b})}"
+      時間指定（timeText あり）はアイコンの後ろに時間を出す。
+    -->
+    <span th:fragment="badge(b)" class="shift-badge" th:classappend="${b.type.cssClass}"><span
+            th:text="${b.icons}">☀</span><span class="shift-badge-time" th:if="${b.timeText != null}"
+            th:text="${b.timeText}">13-22</span></span>
+</body>
+</html>
