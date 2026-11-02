@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+    xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/plain}">
+<head>
+    <title>エラーが発生しました</title>
+</head>
+<body>
+    <div layout:fragment="content" class="container py-5 text-center">
+        <h1 class="h3 mb-4">エラーが発生しました（500）</h1>
+        <a class="btn btn-success" th:href="@{/}">ホームへ戻る</a>
+    </div>
+</body>
+</html>
