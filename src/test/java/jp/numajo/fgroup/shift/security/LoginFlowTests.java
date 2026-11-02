@@ -270,4 +270,25 @@ class LoginFlowTests {
 
         assertThat(redirected).isNull();
     }
+
+    // ---------------------------------------------------------------- SC-01 No.9・ルート
+
+    @Test
+    void SC01_No9_ログイン済みでログイン画面を開くとホームへ() throws Exception {
+        mvc.perform(get("/login").with(user(loginUser("ftstaff")))).andExpect(redirectedUrl("/staff/home"));
+        mvc.perform(get("/login").with(user(loginUser("ftmgr")))).andExpect(redirectedUrl("/manager/home"));
+        mvc.perform(get("/login").with(user(loginUser("ftadmin")))).andExpect(redirectedUrl("/admin/home"));
+    }
+
+    @Test
+    void ルート_未ログインで開くとログイン画面へ() throws Exception {
+        mvc.perform(get("/")).andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    void ルート_ログイン済みで開くとそれぞれのホームへ() throws Exception {
+        mvc.perform(get("/").with(user(loginUser("ftstaff")))).andExpect(redirectedUrl("/staff/home"));
+        mvc.perform(get("/").with(user(loginUser("ftmgr")))).andExpect(redirectedUrl("/manager/home"));
+        mvc.perform(get("/").with(user(loginUser("ftadmin")))).andExpect(redirectedUrl("/admin/home"));
+    }
 }
