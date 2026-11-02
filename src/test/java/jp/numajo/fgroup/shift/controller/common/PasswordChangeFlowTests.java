@@ -7,12 +7,14 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestConstructor;
@@ -31,9 +33,9 @@ import lombok.RequiredArgsConstructor;
  * パスワード変更の流れの結合テスト（20-SC-03 6章 No.4・6・7・8、97_テスト計画書 4.2）。
  *
  * <p>
- * shift_test の DB と本物の SecurityConfig・UserService を使う。成功するとリダイレクトだけで、
- * 画面（HTML）は表示しないので、④b の layout/base.html がなくても動く。
- * 入力エラーの再表示（HTML を返す側）は、AccountControllerTests で確かめる。
+ * shift_test の DB と本物の SecurityConfig・UserService を使う。成功・業務エラーはリダイレクトだけを確かめる。
+ * CSRF トークンなしの POST（94_セキュリティ設計書 6章 No.9）では、先に画面（HTML）を開くので、
+ * layout/base.html の描画も通る。入力エラーの再表示は、AccountControllerTests で確かめる。
  * {@code @Transactional} は付けず、ログインID が「fp」で始まるデータを各テストの前後で消す。
  * </p>
  */
@@ -85,7 +87,7 @@ class PasswordChangeFlowTests {
     // ---------------------------------------------------------------- No.7
 
     @Test
-    void No7_初回の変更に成功するとホームへ移り変更必須が外れてほかの画面を開ける() throws Exception {
+    void 初回の変更に成功する_ホームへ移り変更必須が外れてほかの画面を開ける() throws Exception {
         LoginUser loginUser = new LoginUser(find(), false);
         // 変更前は、ほかの画面を開いてもパスワード変更画面へ戻される
         mvc.perform(get("/staff/home").with(user(loginUser))).andExpect(redirectedUrl("/account/password"));
@@ -110,7 +112,7 @@ class PasswordChangeFlowTests {
     // ---------------------------------------------------------------- No.8
 
     @Test
-    void No8_変更後は新しいパスワードでログインでき古いパスワードではできない() throws Exception {
+    void 変更後にログインする_新しいパスワードで入れ古いパスワードでは入れない() throws Exception {
         LoginUser loginUser = new LoginUser(find(), false);
         mvc.perform(post("/account/password").with(csrf()).with(user(loginUser))
                 .param("currentPassword", OLD).param("newPassword", NEW).param("confirmPassword", NEW))
@@ -122,10 +124,29 @@ class PasswordChangeFlowTests {
                 .andExpect(redirectedUrl("/staff/home"));
     }
 
+    // ---------------------------------------------------------------- CSRF
+
+    @Test
+    void CSRFトークンなしでPOSTする_自分のホームへ戻りDBは変わらない() throws Exception {
+        LoginUser loginUser = new LoginUser(find(), false);
+        String before = find().getPasswordHash();
+        MockHttpSession session = new MockHttpSession();
+        // セッションにトークンがないと /login?expired へ行くので、先に画面を開いてトークンを作っておく
+        mvc.perform(get("/account/password").with(user(loginUser)).session(session))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/account/password").with(user(loginUser)).session(session)
+                .param("currentPassword", OLD).param("newPassword", NEW).param("confirmPassword", NEW))
+                .andExpect(redirectedUrl("/staff/home"));
+
+        assertThat(find().getPasswordHash()).isEqualTo(before);
+        assertThat(find().isMustChangePassword()).isTrue();
+    }
+
     // ---------------------------------------------------------------- No.4・6 業務エラーでDBは変わらない
 
     @Test
-    void No4_確認が違えばDBは変わらずパスワード変更画面へ戻る() throws Exception {
+    void 確認用が一致しない_DBは変わらずパスワード変更画面へ戻る() throws Exception {
         LoginUser loginUser = new LoginUser(find(), false);
         String before = find().getPasswordHash();
 
@@ -138,7 +159,7 @@ class PasswordChangeFlowTests {
     }
 
     @Test
-    void No6_今と同じパスワードならDBは変わらずパスワード変更画面へ戻る() throws Exception {
+    void 新しいパスワードが今と同じ_DBは変わらずパスワード変更画面へ戻る() throws Exception {
         LoginUser loginUser = new LoginUser(find(), false);
         String before = find().getPasswordHash();
 

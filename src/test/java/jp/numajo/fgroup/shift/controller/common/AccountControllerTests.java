@@ -1,13 +1,13 @@
 package jp.numajo.fgroup.shift.controller.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
@@ -23,7 +23,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
@@ -32,14 +31,14 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.InitBinder;
 
 import jp.numajo.fgroup.shift.constant.Role;
+import jp.numajo.fgroup.shift.entity.StoreSetting;
 import jp.numajo.fgroup.shift.entity.User;
 import jp.numajo.fgroup.shift.exception.BusinessException;
 import jp.numajo.fgroup.shift.security.LoginUser;
+import jp.numajo.fgroup.shift.service.NotificationService;
+import jp.numajo.fgroup.shift.service.StoreSettingService;
 import jp.numajo.fgroup.shift.service.UserService;
 
 /**
@@ -47,9 +46,9 @@ import jp.numajo.fgroup.shift.service.UserService;
  *
  * <p>
  * UserService はモックにし、MockMvc（standalone）で、入力チェック・画面の振り分け・フラッシュ・リダイレクト先を確かめる。
- * 画面（HTML）は表示しない（テンプレートは④b の layout/base.html が入ってから総合テストで確かめる）。
- * 入力の前後の空白を取る StringTrimmerEditor は、④b の GlobalModelAdvice が行う処理を、
- * このクラスの {@link TrimAdvice} で再現している（④b がマージされたら、本物に差し替えてよい）。
+ * 画面（HTML）の描画は、ここでは確かめない（PasswordChangeFlowTests の GET と、ブラウザで確かめる）。
+ * 入力の前後の空白を取る処理（StringTrimmerEditor）は、本物の GlobalModelAdvice を組み込んで確かめる。
+ * GlobalModelAdvice が使う StoreSettingService・NotificationService はモックにする。
  * </p>
  *
  * <pre>
@@ -63,23 +62,23 @@ class AccountControllerTests {
     private static final String FORM = "passwordChangeForm";
 
     private UserService userService;
+    private StoreSettingService storeSettingService;
+    private NotificationService notificationService;
     private MockMvc mvc;
     private LoginUser loginUser;
-
-    @ControllerAdvice
-    static class TrimAdvice {
-        @InitBinder
-        void initBinder(WebDataBinder binder) {
-            binder.registerCustomEditor(String.class, new StringTrimmerEditor(true));
-        }
-    }
 
     @BeforeEach
     void setUp() {
         userService = mock(UserService.class);
+        storeSettingService = mock(StoreSettingService.class);
+        notificationService = mock(NotificationService.class);
+        StoreSetting setting = new StoreSetting();
+        setting.setStoreName("テスト店");
+        setting.setShowOthersShifts(true);
+        when(storeSettingService.get()).thenReturn(setting);
         mvc = MockMvcBuilders.standaloneSetup(new AccountController(userService))
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
-                .setControllerAdvice(new TrimAdvice())
+                .setControllerAdvice(new GlobalModelAdvice(storeSettingService, notificationService))
                 .build();
         login(Role.STAFF);
     }
@@ -126,7 +125,7 @@ class AccountControllerTests {
     // ---------------------------------------------------------------- 表示
 
     @Test
-    void 表示_空のフォームを持ってパスワード変更画面へ() throws Exception {
+    void 画面を表示する_空のフォームを持ってパスワード変更画面になる() throws Exception {
         mvc.perform(get("/account/password"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("common/account-password"))
@@ -136,7 +135,7 @@ class AccountControllerTests {
     // ---------------------------------------------------------------- No.1〜3 入力チェック
 
     @Test
-    void No1_3項目とも空ならE0301_E0302_E0304の3つだけ() throws Exception {
+    void 全項目が空_全項目に必須エラーが出てサービスを呼ばない() throws Exception {
         MvcResult result = mvc.perform(change("", "", ""))
                 .andExpect(view().name("common/account-password"))
                 .andReturn();
@@ -148,7 +147,7 @@ class AccountControllerTests {
     }
 
     @Test
-    void No2_新しいパスワードが7文字ならE0303() throws Exception {
+    void 新しいパスワードが7文字_E0303になる() throws Exception {
         MvcResult result = mvc.perform(change("cur", "a".repeat(7), "a".repeat(7)))
                 .andExpect(view().name("common/account-password"))
                 .andReturn();
@@ -158,7 +157,7 @@ class AccountControllerTests {
 
     @ParameterizedTest(name = "No.2 新しいパスワードが{0}文字ならOK")
     @CsvSource({ "8", "64" })
-    void No2_新しいパスワードが8文字と64文字は通る(int length) throws Exception {
+    void 新しいパスワードが8文字と64文字_検証を通ってサービスを呼ぶ(int length) throws Exception {
         String pw = "a".repeat(length);
 
         mvc.perform(change("cur", pw, pw)).andExpect(status().is3xxRedirection());
@@ -167,7 +166,7 @@ class AccountControllerTests {
     }
 
     @Test
-    void No2_新しいパスワードが65文字ならE0303() throws Exception {
+    void 新しいパスワードが65文字_E0303になる() throws Exception {
         MvcResult result = mvc.perform(change("cur", "a".repeat(65), "a".repeat(65)))
                 .andExpect(view().name("common/account-password"))
                 .andReturn();
@@ -177,7 +176,7 @@ class AccountControllerTests {
 
     @ParameterizedTest(name = "No.3 「{0}」を含むとE0303")
     @CsvSource({ "あいうえおかきくけこ", "pass word12", "ｐａｓｓｗｏｒｄ１２" })
-    void No3_全角文字や空白を含むとE0303(String pw) throws Exception {
+    void 新しいパスワードに全角文字や空白を含む_E0303になる(String pw) throws Exception {
         MvcResult result = mvc.perform(change("cur", pw, pw))
                 .andExpect(view().name("common/account-password"))
                 .andReturn();
@@ -186,7 +185,7 @@ class AccountControllerTests {
     }
 
     @Test
-    void 入力エラーで再表示するときは3つの値をnullに戻す() throws Exception {
+    void 入力エラーで再表示する_3つの値をnullに戻す() throws Exception {
         MvcResult result = mvc.perform(change("cur", "short", "short"))
                 .andExpect(view().name("common/account-password"))
                 .andReturn();
@@ -201,7 +200,7 @@ class AccountControllerTests {
 
     @ParameterizedTest(name = "No.4〜6 {0} のときはフラッシュに入れて画面へ戻る")
     @CsvSource({ "E0305", "E0306", "E0307" })
-    void 業務エラーはフラッシュに入れてパスワード変更画面へ戻る(String code) throws Exception {
+    void 業務エラーが起きる_フラッシュに入れてパスワード変更画面へ戻る(String code) throws Exception {
         doThrow(new BusinessException(code)).when(userService)
                 .changePassword(7L, "cur", "NewPassw0rd!", "NewPassw0rd!");
 
@@ -216,7 +215,7 @@ class AccountControllerTests {
 
     @ParameterizedTest(name = "No.7 {0} は {1} へ")
     @CsvSource({ "ADMIN,/admin/home", "MANAGER,/manager/home", "STAFF,/staff/home" })
-    void No7_変更できたらI0301でホームへ移り変更必須が外れる(Role role, String home) throws Exception {
+    void 変更に成功する_I0301でホームへ移り変更必須が外れる(Role role, String home) throws Exception {
         login(role);
 
         mvc.perform(change("cur", "NewPassw0rd!", "NewPassw0rd!"))

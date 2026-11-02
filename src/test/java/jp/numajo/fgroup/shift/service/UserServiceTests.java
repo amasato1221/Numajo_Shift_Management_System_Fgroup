@@ -65,7 +65,7 @@ class UserServiceTests {
     }
 
     @Test
-    void 確認が違えばE0305でユーザーの検索もしない() {
+    void 確認用が一致しない_E0305になりユーザーを検索しない() {
         assertThatThrownBy(() -> service.changePassword(USER_ID, CURRENT, NEW, NEW + "x"))
                 .isInstanceOf(BusinessException.class)
                 .extracting("messageCode").isEqualTo("E0305");
@@ -74,7 +74,7 @@ class UserServiceTests {
     }
 
     @Test
-    void ユーザーが見つからなければResourceNotFoundException() {
+    void ユーザーが存在しない_ResourceNotFoundExceptionになる() {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.changePassword(USER_ID, CURRENT, NEW, NEW))
@@ -84,7 +84,7 @@ class UserServiceTests {
     }
 
     @Test
-    void 今のパスワードが違えばE0306でDBは変わらない() {
+    void 今のパスワードが違う_E0306になりDBは変わらない() {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         String before = user.getPasswordHash();
 
@@ -98,7 +98,7 @@ class UserServiceTests {
     }
 
     @Test
-    void 今と同じパスワードならE0307でDBは変わらない() {
+    void 新しいパスワードが今と同じ_E0307になりDBは変わらない() {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         String before = user.getPasswordHash();
 
@@ -111,7 +111,7 @@ class UserServiceTests {
     }
 
     @Test
-    void 正しく変更するとハッシュが変わり変更必須が外れて操作ログが残る() {
+    void 正しい入力_ハッシュが変わり変更必須が外れて操作ログが残る() {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
         service.changePassword(USER_ID, CURRENT, NEW, NEW);
