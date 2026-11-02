@@ -52,12 +52,22 @@ import jp.numajo.fgroup.shift.service.StoreSettingService;
  * </p>
  *
  * <pre>
- * メソッド           | 判定                               | テスト
- * create             | bindingResult.hasErrors()          | 真：一覧を入れ直して再表示、偽：サービスを呼ぶ
- * create             | catch BusinessException            | 例外あり：E2404 をフラッシュ、なし：I2402
- * update             | bindingResult.hasErrors()          | 真：最初のエラーのコードでリダイレクト、偽：サービスを呼ぶ
- * update             | catch BusinessException            | 例外あり：E2404 をフラッシュ、なし：I2403
- * saveSlotRequired   | catch BusinessException            | 例外あり：E2405 をフラッシュ、なし：I2405
+ * 判定                                      | テスト
+ * create     bindingResult.hasErrors()      | 真：一覧を入れ直して再表示、偽：サービスを呼ぶ
+ * create     catch BusinessException        | 例外あり：E2404 をフラッシュ、なし：I2402
+ * update     catch BusinessException        | 例外あり：E2404 をフラッシュ、なし：I2403
+ * saveSlotRequired  catch BusinessException | 例外あり：E2405 をフラッシュ、なし：I2405
+ *
+ * 組み合わせ表：入力チェック（名前のエラー × 説明のエラー。97_テスト計画書 3.2）
+ * No. | 名前 | 説明 | 追加の結果                 | 変更の結果
+ *  1  | なし | なし | サービスを呼ぶ（I2402）     | サービスを呼ぶ（I2403）
+ *  2  | あり | なし | 名前のエラーで再表示        | 名前のエラー（E2401・E2402）でリダイレクト
+ *  3  | なし | あり | 説明のエラーで再表示        | 説明のエラー（E2403）でリダイレクト
+ *  4  | あり | あり | 両方のエラーで再表示        | 名前のエラーを先に出す（E2401・E2402）
+ *
+ * 各テスト：No.1＝追加で名前が50文字と説明が200文字／変更に成功する
+ *          No.2＝追加・変更で名前が空・51文字    No.3＝追加・変更で説明が201文字
+ *          No.4＝追加で名前が空かつ説明が201文字／変更で名前が空かつ説明が201文字・名前が51文字かつ説明が201文字
  * </pre>
  */
 class ManagerSkillControllerTests {
@@ -111,7 +121,7 @@ class ManagerSkillControllerTests {
     // ---------------------------------------------------------------- 表示
 
     @Test
-    void 表示_一覧と空のフォームと枠の必要職能を持って職能管理画面へ() throws Exception {
+    void 画面を表示する_一覧と空のフォームと枠の必要職能を持って職能管理画面になる() throws Exception {
         mvc.perform(get("/manager/skills"))
                 .andExpect(status().isOk())
                 .andExpect(view().name(VIEW))
@@ -121,7 +131,7 @@ class ManagerSkillControllerTests {
     // ---------------------------------------------------------------- 追加
 
     @Test
-    void 追加_No1_名前が空ならE2401で一覧を入れ直して再表示しサービスは呼ばない() throws Exception {
+    void 追加で名前が空_E2401で一覧を入れ直して再表示しサービスを呼ばない() throws Exception {
         MvcResult result = mvc.perform(post("/manager/skills").param("name", "").param("description", ""))
                 .andExpect(status().isOk())
                 .andExpect(view().name(VIEW))
@@ -133,7 +143,7 @@ class ManagerSkillControllerTests {
     }
 
     @Test
-    void 追加_No1_名前が51文字ならE2402で再表示() throws Exception {
+    void 追加で名前が51文字_E2402で再表示する() throws Exception {
         MvcResult result = mvc.perform(post("/manager/skills").param("name", "あ".repeat(51)))
                 .andExpect(view().name(VIEW))
                 .andReturn();
@@ -143,7 +153,7 @@ class ManagerSkillControllerTests {
     }
 
     @Test
-    void 追加_名前が50文字と説明が200文字は通る() throws Exception {
+    void 追加で名前が50文字と説明が200文字_通ってI2402で一覧へ戻る() throws Exception {
         String name = "あ".repeat(50);
         String description = "い".repeat(200);
 
@@ -155,7 +165,7 @@ class ManagerSkillControllerTests {
     }
 
     @Test
-    void 追加_説明が201文字ならE2403で再表示() throws Exception {
+    void 追加で説明が201文字_E2403で再表示する() throws Exception {
         MvcResult result = mvc.perform(post("/manager/skills").param("name", "レジ")
                 .param("description", "い".repeat(201)))
                 .andExpect(view().name(VIEW))
@@ -165,7 +175,19 @@ class ManagerSkillControllerTests {
     }
 
     @Test
-    void 追加_前後の空白は取って渡し_説明が空ならnullで渡す() throws Exception {
+    void 追加で名前が空かつ説明が201文字_両方のエラーで再表示する() throws Exception {
+        MvcResult result = mvc.perform(post("/manager/skills").param("name", "")
+                .param("description", "い".repeat(201)))
+                .andExpect(view().name(VIEW))
+                .andReturn();
+
+        assertThat(codes(result, "name")).containsExactly("NotBlank");
+        assertThat(codes(result, "description")).containsExactly("Size");
+        verify(skillService, never()).create(any(), any(), anyLong());
+    }
+
+    @Test
+    void 追加で前後に空白がある_取って渡し説明が空ならnullで渡す() throws Exception {
         mvc.perform(post("/manager/skills").param("name", "  レジ  ").param("description", "   "))
                 .andExpect(redirectedUrl("/manager/skills"));
 
@@ -173,7 +195,7 @@ class ManagerSkillControllerTests {
     }
 
     @Test
-    void 追加_No2_同じ名前ならE2404をフラッシュして一覧へ() throws Exception {
+    void 追加で同じ名前_E2404をフラッシュして一覧へ戻る() throws Exception {
         doThrow(new BusinessException("E2404")).when(skillService).create("レジ", null, 9L);
 
         mvc.perform(post("/manager/skills").param("name", "レジ"))
@@ -184,7 +206,7 @@ class ManagerSkillControllerTests {
     // ---------------------------------------------------------------- 変更
 
     @Test
-    void 変更_名前が空なら最初のエラーのE2401でリダイレクトしサービスは呼ばない() throws Exception {
+    void 変更で名前が空_E2401でリダイレクトしサービスを呼ばない() throws Exception {
         mvc.perform(post("/manager/skills/5").param("name", ""))
                 .andExpect(redirectedUrl("/manager/skills"))
                 .andExpect(flash().attribute("errorMessage", "E2401"));
@@ -193,21 +215,43 @@ class ManagerSkillControllerTests {
     }
 
     @Test
-    void 変更_名前が51文字ならE2402でリダイレクト() throws Exception {
+    void 変更で名前が51文字_E2402でリダイレクトする() throws Exception {
         mvc.perform(post("/manager/skills/5").param("name", "あ".repeat(51)))
                 .andExpect(redirectedUrl("/manager/skills"))
                 .andExpect(flash().attribute("errorMessage", "E2402"));
     }
 
     @Test
-    void 変更_説明が201文字ならE2403でリダイレクト() throws Exception {
+    void 変更で説明が201文字_E2403でリダイレクトする() throws Exception {
         mvc.perform(post("/manager/skills/5").param("name", "レジ").param("description", "い".repeat(201)))
                 .andExpect(redirectedUrl("/manager/skills"))
                 .andExpect(flash().attribute("errorMessage", "E2403"));
     }
 
     @Test
-    void 変更_No3_成功するとI2403で一覧へ() throws Exception {
+    void 変更で名前が空かつ説明が201文字_名前のE2401を先に出す() throws Exception {
+        // エラーの並び順が決まっていないと、送るたびに E2401 と E2403 が入れ替わるので、何回か送って確かめる
+        for (int i = 0; i < 10; i++) {
+            mvc.perform(post("/manager/skills/5").param("name", "").param("description", "い".repeat(201)))
+                    .andExpect(redirectedUrl("/manager/skills"))
+                    .andExpect(flash().attribute("errorMessage", "E2401"));
+        }
+
+        verify(skillService, never()).update(anyLong(), any(), any(), anyLong());
+    }
+
+    @Test
+    void 変更で名前が51文字かつ説明が201文字_名前のE2402を先に出す() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            mvc.perform(post("/manager/skills/5").param("name", "あ".repeat(51))
+                    .param("description", "い".repeat(201)))
+                    .andExpect(redirectedUrl("/manager/skills"))
+                    .andExpect(flash().attribute("errorMessage", "E2402"));
+        }
+    }
+
+    @Test
+    void 変更に成功する_I2403で一覧へ戻る() throws Exception {
         mvc.perform(post("/manager/skills/5").param("name", "レジ").param("description", "会計"))
                 .andExpect(redirectedUrl("/manager/skills"))
                 .andExpect(flash().attribute("successMessage", "I2403"));
@@ -216,7 +260,7 @@ class ManagerSkillControllerTests {
     }
 
     @Test
-    void 変更_No2_ほかと同じ名前ならE2404をフラッシュ() throws Exception {
+    void 変更でほかと同じ名前_E2404をフラッシュする() throws Exception {
         doThrow(new BusinessException("E2404")).when(skillService).update(5L, "レジ", null, 9L);
 
         mvc.perform(post("/manager/skills/5").param("name", "レジ"))
@@ -225,7 +269,7 @@ class ManagerSkillControllerTests {
     }
 
     @Test
-    void 変更_IDが数字でなければ400() throws Exception {
+    void 変更のIDが数字でない_400になる() throws Exception {
         mvc.perform(post("/manager/skills/abc").param("name", "レジ"))
                 .andExpect(status().isBadRequest());
     }
@@ -233,7 +277,7 @@ class ManagerSkillControllerTests {
     // ---------------------------------------------------------------- 削除
 
     @Test
-    void 削除_No4_成功するとI2404で一覧へ() throws Exception {
+    void 削除に成功する_I2404で一覧へ戻る() throws Exception {
         mvc.perform(post("/manager/skills/5/delete"))
                 .andExpect(redirectedUrl("/manager/skills"))
                 .andExpect(flash().attribute("successMessage", "I2404"));
@@ -244,7 +288,7 @@ class ManagerSkillControllerTests {
     // ---------------------------------------------------------------- 枠の必要職能
 
     @Test
-    void 枠の必要職能_No5_チェックした職能のIDを渡しI2405で一覧へ() throws Exception {
+    void 枠の必要職能をチェックして保存する_チェックした職能IDを渡しI2405で一覧へ戻る() throws Exception {
         mvc.perform(post("/manager/skills/slot-required")
                 .param("daySkillIds", "1", "2").param("eveningSkillIds", "2"))
                 .andExpect(redirectedUrl("/manager/skills"))
@@ -254,7 +298,7 @@ class ManagerSkillControllerTests {
     }
 
     @Test
-    void 枠の必要職能_No6_何もチェックしなければ空のリストを渡す() throws Exception {
+    void 枠の必要職能を何もチェックせず保存する_空のリストを渡す() throws Exception {
         mvc.perform(post("/manager/skills/slot-required"))
                 .andExpect(redirectedUrl("/manager/skills"))
                 .andExpect(flash().attribute("successMessage", "I2405"));
@@ -263,7 +307,7 @@ class ManagerSkillControllerTests {
     }
 
     @Test
-    void 枠の必要職能_No7_存在しない職能ならE2405をフラッシュ() throws Exception {
+    void 枠の必要職能に存在しない職能を送る_E2405をフラッシュする() throws Exception {
         doThrow(new BusinessException("E2405")).when(skillService)
                 .saveSlotRequired(List.of(99L), List.of(), 9L);
 

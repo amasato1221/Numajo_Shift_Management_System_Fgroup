@@ -118,9 +118,15 @@ public class ManagerSkillController {
         model.addAttribute("slotSkillForm", slotSkillForm);
     }
 
-    /** 最初の入力チェックのエラーのメッセージコード（"{E2401}" の E2401）。 */
+    /**
+     * 最初の入力チェックのエラーのメッセージコード（"{E2401}" の E2401）。
+     * 項目の順番は、画面の上から順（名前 → 説明）に固定する。
+     */
     private static String firstErrorCode(BindingResult bindingResult) {
-        FieldError error = bindingResult.getFieldErrors().get(0);
+        FieldError error = bindingResult.getFieldError("name");
+        if (error == null) {
+            error = bindingResult.getFieldError("description");
+        }
         ConstraintViolation<?> violation = error.unwrap(ConstraintViolation.class);
         String template = violation.getMessageTemplate();
         return template.substring(1, template.length() - 1);

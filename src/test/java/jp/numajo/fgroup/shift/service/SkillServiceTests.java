@@ -33,18 +33,38 @@ import jp.numajo.fgroup.shift.repository.SlotRepository;
  * SkillService の単体テスト（20-SM-04 2章・6章、97_テスト計画書 4.1）。
  *
  * <p>
- * 判定はすべて条件が1つずつなので、組み合わせ表は要らない（条件網羅＝判定条件網羅）。
+ * 判定は、1つずつの条件を真と偽で確かめる（条件網羅）。複数の条件が組み合わさる判定はないので、
+ * 組み合わせ表は、判定ごとに真・偽の行を並べた下の表にする（97_テスト計画書 3.2）。
  * Repository と OperationLogService はモックにする。
+ * 表の No. は、テストメソッドを上から数えた順で、1対1で対応する。
  * </p>
  *
  * <pre>
- * メソッド           | 判定                          | 真のとき          | テスト
- * create             | existsByName                  | E2404            | 同じ名前で追加
- * update             | findById が空                  | ResourceNotFound | 変更で見つからない
- * update             | existsByNameAndIdNot          | E2404            | 変更で同じ名前
- * delete             | findById が空                  | ResourceNotFound | 削除で見つからない
- * saveSlotRequired   | 取れた職能の数 != 選んだ数      | E2405            | 存在しない職能ID
- * saveSlotRequired   | 枠のID が 日勤／夕勤／それ以外   | 置き換え／無視    | 保存
+ * 判定の記号
+ *   A＝リストが null か          B＝リストの要素が null か    C＝取れた職能の数 != 選んだ数
+ *   D＝枠のID が 日勤            E＝枠のID が 夕勤（D が偽のとき）
+ *
+ * No. | メソッド           | 判定                   | 値              | 結果
+ *  1  | findAll           | －                     | －              | 名前順の全件を返す
+ *  2  | findRows          | 人数の集計にある        | 真・偽          | 人数／0人
+ *  3  | getSlotSkillForm  | D、E                   | 真／偽→真       | 日勤の欄／夕勤の欄に職能ID順で入れる
+ *  4  | getSlotSkillForm  | 必要職能が空            | 真              | 日勤も夕勤も空のリスト
+ *  5  | create            | existsByName           | 真              | E2404、保存もログもなし
+ *  6  | create            | existsByName           | 偽              | 保存して SKILL_CREATE
+ *  7  | update            | findById が空          | 真              | ResourceNotFound
+ *  8  | update            | existsByNameAndIdNot   | 真              | E2404、上書きしない
+ *  9  | update            | 上の2つ                | 偽・偽          | 上書きして SKILL_UPDATE
+ * 10  | update            | existsByNameAndIdNot   | 偽（自分は除く） | 同じ名前のまま説明だけ変わる
+ * 11  | delete            | findById が空          | 真              | ResourceNotFound
+ * 12  | delete            | findById が空          | 偽              | 削除して SKILL_DELETE
+ * 13  | saveSlotRequired  | C                      | 真              | E2405、枠もログも変えない
+ * 14  | saveSlotRequired  | A、B、C、D、E           | 偽・偽・偽・真・真 | 日勤と夕勤を置き換えてログ
+ * 15  | saveSlotRequired  | A                      | 真              | 空として扱い全部外す
+ * 16  | saveSlotRequired  | 重複した職能ID          | －              | 1つとして扱う
+ * 17  | 両方              | D、E                   | 偽・偽          | 読み取りも置き換えもしない
+ * 18  | saveSlotRequired  | B                      | 真              | null を無視する
+ *
+ * テストメソッドは、この表の No. の順に並べている。名前は「条件_期待する結果」の形。
  * </pre>
  */
 class SkillServiceTests {
@@ -82,7 +102,7 @@ class SkillServiceTests {
     // ---------------------------------------------------------------- 一覧・初期値
 
     @Test
-    void findAllは名前順の全件を返す() {
+    void 職能が登録されている_名前順の全件を返す() {
         List<Skill> skills = List.of(skill(1L, "レジ", null));
         when(skillRepository.findAllByOrderByNameAscIdAsc()).thenReturn(skills);
 
@@ -90,7 +110,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void findRowsは持っている人数を付け_いない職能は0人() {
+    void 持っている人がいる職能といない職能がある_人数を付け持つ人がいなければ0人にする() {
         when(skillRepository.findAllByOrderByNameAscIdAsc())
                 .thenReturn(List.of(skill(1L, "揚げ物", "フライヤー"), skill(2L, "レジ", null)));
         when(skillRepository.countActiveStaffPerSkill())
@@ -104,7 +124,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void getSlotSkillFormは日勤と夕勤の必要職能を職能ID順で返す() {
+    void 日勤と夕勤に必要職能がある_職能ID順で日勤と夕勤に分けて返す() {
         Skill a = skill(1L, "A", null);
         Skill b = skill(2L, "B", null);
         Skill c = skill(3L, "C", null);
@@ -118,7 +138,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void getSlotSkillFormは必要職能がなければ空のリスト() {
+    void 必要職能がない_日勤も夕勤も空のリストを返す() {
         when(slotRepository.findAllWithRequiredSkills())
                 .thenReturn(List.of(slot(SlotIds.DAY), slot(SlotIds.EVENING)));
 
@@ -131,7 +151,7 @@ class SkillServiceTests {
     // ---------------------------------------------------------------- 追加
 
     @Test
-    void 同じ名前で追加するとE2404で保存もログも残さない() {
+    void 同じ名前の職能がある_追加するとE2404になり保存もログも残さない() {
         when(skillRepository.existsByName("レジ")).thenReturn(true);
 
         assertThatThrownBy(() -> service.create("レジ", null, OPERATOR))
@@ -143,7 +163,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void 追加すると1行保存して操作ログSKILL_CREATEを残す() {
+    void 同じ名前の職能がない_追加すると保存して操作ログSKILL_CREATEを残す() {
         when(skillRepository.existsByName("レジ")).thenReturn(false);
         when(skillRepository.save(any(Skill.class))).thenAnswer(invocation -> {
             Skill saved = invocation.getArgument(0);
@@ -163,7 +183,7 @@ class SkillServiceTests {
     // ---------------------------------------------------------------- 変更
 
     @Test
-    void 変更で職能が見つからなければResourceNotFoundException() {
+    void 変更する職能が存在しない_ResourceNotFoundExceptionになる() {
         when(skillRepository.findById(5L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.update(5L, "新", null, OPERATOR))
@@ -173,7 +193,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void 変更でほかの職能と同じ名前ならE2404で上書きしない() {
+    void ほかの職能と同じ名前に変更する_E2404になり上書きしない() {
         Skill target = skill(5L, "旧", "説明");
         when(skillRepository.findById(5L)).thenReturn(Optional.of(target));
         when(skillRepository.existsByNameAndIdNot("新", 5L)).thenReturn(true);
@@ -188,7 +208,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void 変更すると名前と説明を上書きして操作ログSKILL_UPDATEに古い名前と新しい名前を残す() {
+    void 名前と説明を変更する_上書きして操作ログSKILL_UPDATEに古い名前と新しい名前を残す() {
         Skill target = skill(5L, "旧", "説明");
         when(skillRepository.findById(5L)).thenReturn(Optional.of(target));
         when(skillRepository.existsByNameAndIdNot("新", 5L)).thenReturn(false);
@@ -201,7 +221,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void 自分と同じ名前のまま説明だけ変えられる() {
+    void 自分と同じ名前のまま説明だけ変更する_変更できる() {
         Skill target = skill(5L, "レジ", "旧");
         when(skillRepository.findById(5L)).thenReturn(Optional.of(target));
         // 自分自身は除いて探すので、同じ名前は見つからない
@@ -216,7 +236,7 @@ class SkillServiceTests {
     // ---------------------------------------------------------------- 削除
 
     @Test
-    void 削除で職能が見つからなければResourceNotFoundException() {
+    void 削除する職能が存在しない_ResourceNotFoundExceptionになる() {
         when(skillRepository.findById(5L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.delete(5L, OPERATOR))
@@ -227,7 +247,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void 削除すると職能を消して操作ログSKILL_DELETEに名前を残す() {
+    void 職能を削除する_消して操作ログSKILL_DELETEに名前を残す() {
         Skill target = skill(5L, "レジ", null);
         when(skillRepository.findById(5L)).thenReturn(Optional.of(target));
 
@@ -240,7 +260,7 @@ class SkillServiceTests {
     // ---------------------------------------------------------------- 枠の必要職能
 
     @Test
-    void 存在しない職能IDがあればE2405で枠も変えずログも残さない() {
+    void 存在しない職能IDを選ぶ_E2405になり枠も変えずログも残さない() {
         Skill a = skill(1L, "A", null);
         Slot day = slot(SlotIds.DAY, a);
         when(skillRepository.findAllById(any())).thenReturn(List.of(a));
@@ -255,7 +275,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void 保存すると日勤と夕勤の必要職能をそれぞれ置き換えて操作ログを残す() {
+    void 日勤と夕勤の職能を選んで保存する_それぞれ置き換えて操作ログを残す() {
         Skill a = skill(1L, "A", null);
         Skill b = skill(2L, "B", null);
         Skill c = skill(3L, "C", null);
@@ -273,7 +293,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void nullは空のリストとして扱い全部外せる() {
+    void 職能IDのリストがnull_空として扱い全部外す() {
         Skill a = skill(1L, "A", null);
         Slot day = slot(SlotIds.DAY, a);
         Slot evening = slot(SlotIds.EVENING, a);
@@ -289,7 +309,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void 同じ職能IDが重なっていても1つとして扱う() {
+    void 同じ職能IDが重なっている_1つとして扱う() {
         Skill a = skill(1L, "A", null);
         Slot day = slot(SlotIds.DAY);
         when(skillRepository.findAllById(any())).thenReturn(List.of(a));
@@ -304,7 +324,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void 日勤と夕勤以外の枠は読み取りも置き換えもしない() {
+    void 日勤と夕勤以外の枠がある_読み取りも置き換えもしない() {
         Skill a = skill(1L, "A", null);
         Slot other = slot((byte) 3, a);
         when(skillRepository.findAllById(any())).thenReturn(List.of(a));
@@ -319,7 +339,7 @@ class SkillServiceTests {
     }
 
     @Test
-    void リストの中のnullは無視する() {
+    void 職能IDのリストにnullが含まれる_nullを無視する() {
         Skill a = skill(1L, "A", null);
         Slot day = slot(SlotIds.DAY);
         when(skillRepository.findAllById(any())).thenReturn(List.of(a));

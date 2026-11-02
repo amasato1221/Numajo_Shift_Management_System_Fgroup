@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestConstructor;
@@ -33,8 +36,9 @@ import lombok.RequiredArgsConstructor;
  * 職能管理の流れの結合テスト（20-SM-04 6章 No.2〜7、97_テスト計画書 4.2）。
  *
  * <p>
- * shift_test の DB と本物の SecurityConfig・SkillService を使う。成功・業務エラーはリダイレクトだけなので、
- * 画面（HTML）は表示しない。{@code @Transactional} は付けず、ログインID が「fk」で始まる店長と、
+ * shift_test の DB と本物の SecurityConfig・SkillService を使う。成功・業務エラーはリダイレクトだけを確かめる。
+ * CSRF トークンなしの POST（94_セキュリティ設計書 6章 No.9）では、先に画面（HTML）を開くので、
+ * skills.html と layout/base.html の描画も通る。{@code @Transactional} は付けず、ログインID が「fk」で始まる店長と、
  * 職能名が「fk」で始まる職能を、各テストの前後で消す。
  * </p>
  */
@@ -112,7 +116,7 @@ class SkillFlowTests {
     // ---------------------------------------------------------------- 追加・変更
 
     @Test
-    void 追加すると職能が1行増えて操作ログSKILL_CREATEが残る() throws Exception {
+    void 職能を追加する_1行増えて操作ログSKILL_CREATEが残る() throws Exception {
         addSkill("fkレジ");
 
         assertThat(skillId("fkレジ")).isNotNull();
@@ -120,7 +124,7 @@ class SkillFlowTests {
     }
 
     @Test
-    void No2_同じ名前で追加するとE2404で増えない() throws Exception {
+    void 同じ名前で追加する_E2404になり増えない() throws Exception {
         addSkill("fkレジ");
 
         mvc.perform(post("/manager/skills").with(csrf()).with(user(manager)).param("name", "fkレジ"))
@@ -132,7 +136,7 @@ class SkillFlowTests {
     }
 
     @Test
-    void No2_No3_変更で同じ名前はE2404_自分の名前のままの説明変更は通る() throws Exception {
+    void ほかと同じ名前への変更と説明だけの変更_前者はE2404で後者は通る() throws Exception {
         addSkill("fkレジ");
         addSkill("fk調理");
         Long cooking = skillId("fk調理");
@@ -153,7 +157,7 @@ class SkillFlowTests {
     // ---------------------------------------------------------------- 削除
 
     @Test
-    void No4_持っている人がいる職能を削除すると職能と持っている人の行が消える() throws Exception {
+    void 持っている人がいる職能を削除する_職能と持っている人の行が消える() throws Exception {
         addSkill("fkレジ");
         Long skillId = skillId("fkレジ");
         jdbcTemplate.update("INSERT INTO user_skills (user_id, skill_id) VALUES (?, ?)", staffId, skillId);
@@ -170,15 +174,15 @@ class SkillFlowTests {
     }
 
     @Test
-    void 存在しない職能を削除すると404() throws Exception {
+    void 存在しない職能を削除する_404になる() throws Exception {
         mvc.perform(post("/manager/skills/999999999/delete").with(csrf()).with(user(manager)))
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+                .andExpect(status().isNotFound());
     }
 
     // ---------------------------------------------------------------- 枠の必要職能
 
     @Test
-    void No5_No6_枠の必要職能を保存し_全部外すと空になる() throws Exception {
+    void 枠の必要職能を保存して全部外す_保存した値になり外すと空になる() throws Exception {
         addSkill("fkレジ");
         Long skillId = skillId("fkレジ");
 
@@ -196,7 +200,7 @@ class SkillFlowTests {
     }
 
     @Test
-    void No7_存在しない職能IDならE2405でDBは変わらない() throws Exception {
+    void 存在しない職能IDで枠の必要職能を保存する_E2405になりDBは変わらない() throws Exception {
         mvc.perform(post("/manager/skills/slot-required").with(csrf()).with(user(manager))
                 .param("daySkillIds", "999999999"))
                 .andExpect(redirectedUrl("/manager/skills"))
@@ -210,10 +214,26 @@ class SkillFlowTests {
                 Integer.class, skillId);
     }
 
+    // ---------------------------------------------------------------- CSRF
+
+    @Test
+    void CSRFトークンなしでPOSTする_自分のホームへ戻りDBは変わらない() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        // セッションにトークンがないと /login?expired へ行くので、先に画面を開いてトークンを作っておく
+        mvc.perform(get("/manager/skills").with(user(manager)).session(session))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/manager/skills").with(user(manager)).session(session).param("name", "fkレジ"))
+                .andExpect(redirectedUrl("/manager/home"));
+
+        assertThat(skillId("fkレジ")).isNull();
+        assertThat(logCount("SKILL_CREATE")).isZero();
+    }
+
     // ---------------------------------------------------------------- 権限
 
     @Test
-    void バイトは職能管理の操作ができず自分のホームへ戻される() throws Exception {
+    void バイトが職能管理を操作する_自分のホームへ戻され職能は増えない() throws Exception {
         mvc.perform(post("/manager/skills").with(csrf()).with(user(staff)).param("name", "fkレジ"))
                 .andExpect(redirectedUrl("/staff/home"));
 
