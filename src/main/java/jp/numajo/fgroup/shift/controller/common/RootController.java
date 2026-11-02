@@ -6,13 +6,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import jp.numajo.fgroup.shift.security.HomeUrl;
 import jp.numajo.fgroup.shift.security.LoginUser;
-import lombok.RequiredArgsConstructor;
 
 /**
  * ルート（/）。ログイン状態に応じて、ログイン画面かホームへ移す（30-06 1.1）。
  */
 @Controller
-@RequiredArgsConstructor
 public class RootController {
 
     @GetMapping("/")
