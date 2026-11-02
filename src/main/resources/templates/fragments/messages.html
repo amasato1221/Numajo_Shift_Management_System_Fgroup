@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!--
+      本文の一番上に出すメッセージ（20-00 2.2）。
+      値はメッセージコード（successMessage・warningMessage・errorMessage）、引数は xxxArgs（Object[]、なくてもよい）。
+      #{${successMessage}(${successArgs})} と書くと配列が1つの引数として扱われ、{0} に配列の文字列が入るため、
+      #messages.msgWithParams で配列の中身を1つずつ引数に渡す。
+    -->
+    <div th:fragment="messages" class="app-messages">
+        <div class="alert alert-success" role="alert" th:if="${successMessage != null}"
+             th:text="${#messages.msgWithParams(successMessage, successArgs)}"></div>
+        <div class="alert alert-warning" role="alert" th:if="${warningMessage != null}"
+             th:text="${#messages.msgWithParams(warningMessage, warningArgs)}"></div>
+        <div class="alert alert-danger" role="alert" th:if="${errorMessage != null}"
+             th:text="${#messages.msgWithParams(errorMessage, errorArgs)}"></div>
+    </div>
+</body>
+</html>

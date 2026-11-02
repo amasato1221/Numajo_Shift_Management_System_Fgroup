@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+    <!--
+      利用者の種類ごとのメニュー（20-00 3.2）。
+      menu：今いる画面の値（各テンプレートの <html th:with="menu='home'"> で渡す）。
+      767px以下は Bootstrap の Offcanvas で隠し、ヘッダーの ☰ で開く。
+    -->
+    <nav th:fragment="menu(menu)" class="app-menu offcanvas-md offcanvas-start" tabindex="-1" id="appMenu"
+         aria-label="メニュー">
+        <div class="offcanvas-header">
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#appMenu"
+                    aria-label="閉じる"></button>
+        </div>
+        <div class="offcanvas-body d-block">
+            <!-- バイト -->
+            <th:block sec:authorize="hasRole('STAFF')">
+                <span class="role-label role-staff">バイト</span>
+                <ul class="app-menu-list">
+                    <li><a th:href="@{/staff/home}" th:classappend="${menu == 'home'} ? 'active'">🏠 ホーム</a></li>
+                    <li><a th:href="@{/staff/shifts}" th:classappend="${menu == 'shifts'} ? 'active'">📅 シフトカレンダー</a></li>
+                    <li><a th:href="@{/staff/requests}" th:classappend="${menu == 'requests'} ? 'active'">✏ 希望を出す</a></li>
+                    <li th:if="${showOthersShifts}"><a th:href="@{/staff/all-shifts}"
+                            th:classappend="${menu == 'all-shifts'} ? 'active'">👥 みんなのシフト</a></li>
+                    <li><a th:href="@{/staff/chat}" th:classappend="${menu == 'chat'} ? 'active'">💬 チャット</a></li>
+                    <li><a th:href="@{/notices}" th:classappend="${menu == 'notices'} ? 'active'">🔔 お知らせ</a></li>
+                    <li><a th:href="@{/staff/settings}" th:classappend="${menu == 'settings'} ? 'active'">⚙ 設定</a></li>
+                    <li><a th:href="@{/account/password}" th:classappend="${menu == 'account'} ? 'active'">👤 アカウント設定</a></li>
+                </ul>
+            </th:block>
+            <!-- 店長 -->
+            <th:block sec:authorize="hasRole('MANAGER')">
+                <span class="role-label role-manager">店長</span>
+                <ul class="app-menu-list">
+                    <li><a th:href="@{/manager/home}" th:classappend="${menu == 'home'} ? 'active'">🏠 ダッシュボード</a></li>
+                    <li><a th:href="@{/manager/periods}" th:classappend="${menu == 'periods'} ? 'active'">📅 シフト作成</a></li>
+                    <li><a th:href="@{/manager/absences}" th:classappend="${menu == 'absences'} ? 'active'">⚠ 欠勤登録</a></li>
+                    <li><a th:href="@{/manager/staff}" th:classappend="${menu == 'staff'} ? 'active'">👥 スタッフ一覧</a></li>
+                    <li><a th:href="@{/manager/skills}" th:classappend="${menu == 'skills'} ? 'active'">🎓 職能管理</a></li>
+                    <li><a th:href="@{/manager/required}" th:classappend="${menu == 'required'} ? 'active'">🔢 必要人数設定</a></li>
+                    <li><a th:href="@{/manager/settings}" th:classappend="${menu == 'settings'} ? 'active'">⚙ 店舗設定</a></li>
+                    <li><a th:href="@{/manager/chats}" th:classappend="${menu == 'chats'} ? 'active'">💬 チャット</a></li>
+                    <li><a th:href="@{/notices}" th:classappend="${menu == 'notices'} ? 'active'">🔔 お知らせ</a></li>
+                    <li><a th:href="@{/account/password}" th:classappend="${menu == 'account'} ? 'active'">👤 アカウント設定</a></li>
+                </ul>
+            </th:block>
+            <!-- 管理者 -->
+            <th:block sec:authorize="hasRole('ADMIN')">
+                <span class="role-label role-admin">管理者</span>
+                <ul class="app-menu-list">
+                    <li><a th:href="@{/admin/home}" th:classappend="${menu == 'home'} ? 'active'">🏠 管理メニュー</a></li>
+                    <li><a th:href="@{/admin/managers}" th:classappend="${menu == 'managers'} ? 'active'">👤 店長アカウント管理</a></li>
+                    <li><a th:href="@{/admin/logs}" th:classappend="${menu == 'logs'} ? 'active'">📄 操作ログ</a></li>
+                    <li><a th:href="@{/admin/backups}" th:classappend="${menu == 'backups'} ? 'active'">💾 バックアップ</a></li>
+                    <li><a th:href="@{/notices}" th:classappend="${menu == 'notices'} ? 'active'">🔔 お知らせ</a></li>
+                    <li><a th:href="@{/account/password}" th:classappend="${menu == 'account'} ? 'active'">👤 アカウント設定</a></li>
+                </ul>
+            </th:block>
+            <!-- スマホはヘッダーにログアウトがないので、メニューの一番下に出す -->
+            <form class="d-md-none mt-3" th:action="@{/logout}" method="post">
+                <button type="submit" class="btn btn-outline-secondary btn-sm w-100">ログアウト</button>
+            </form>
+        </div>
+    </nav>
+</body>
+</html>

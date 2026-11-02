@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}" th:with="menu='notices'">
+<head>
+    <title>テスト画面</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <h1>テストの本文</h1>
+        <th:block th:each="b : ${badges}">
+            <span th:replace="~{fragments/shift-badge :: badge(${b})}"></span>
+        </th:block>
+        <div th:if="${messages != null}" th:replace="~{fragments/chat-messages :: chat(${messages})}"></div>
+        <p id="trimmed" th:text="${trimmed}"></p>
+    </div>
+</body>
+</html>

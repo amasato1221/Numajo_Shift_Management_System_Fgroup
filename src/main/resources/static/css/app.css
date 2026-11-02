@@ -1,0 +1,330 @@
+/*
+ * シフト管理システムの CSS（91_コーディング規約 5.2）。
+ * 各自は自分の画面の区切りの中だけに書く（98_実装計画書 6.3）。区切りの間は空行を1行あける。
+ */
+
+/* ===== 共通（④b。新井） ===== */
+:root {
+    --color-day: #00843D;
+    --color-evening: #F58220;
+    --color-pending: #C9CFD3;
+    --color-pending-text: #3C4248;
+    --color-absent: #DC3545;
+    --color-admin: #6C757D;
+    --color-bg: #F4F6F8;
+    --color-border: #DEE2E6;
+    --color-bell: #E4002B;
+    --menu-width-pc: 220px;
+    --menu-width-tablet: 180px;
+}
+
+body {
+    background-color: var(--color-bg);
+}
+
+/* オレンジと緑の帯 */
+.stripe {
+    height: 10px;
+    background: linear-gradient(to bottom, var(--color-evening) 0, var(--color-evening) 4px,
+            #FFFFFF 4px, #FFFFFF 6px, var(--color-day) 6px, var(--color-day) 10px);
+}
+
+/* ヘッダー */
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background-color: #FFFFFF;
+}
+
+.app-menu-toggle {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.app-logo {
+    object-fit: contain;
+}
+
+.app-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.app-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.app-store {
+    padding-right: 12px;
+    border-right: 1px solid var(--color-border);
+}
+
+.app-bell {
+    position: relative;
+    font-size: 1.4rem;
+    text-decoration: none;
+}
+
+.app-bell-count {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    min-width: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background-color: var(--color-bell);
+    color: #FFFFFF;
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+.app-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #212529;
+    color: #FFFFFF;
+}
+
+/* メニューと本文 */
+.app-body {
+    display: flex;
+    min-height: calc(100vh - 66px);
+}
+
+.app-menu {
+    padding: 16px 12px;
+    background-color: #FFFFFF;
+    border-right: 1px solid var(--color-border);
+}
+
+.app-menu-list {
+    padding: 0;
+    margin: 12px 0 0;
+    list-style: none;
+}
+
+.app-menu-list a {
+    display: block;
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: #212529;
+    text-decoration: none;
+}
+
+.app-menu-list a:hover {
+    background-color: var(--color-bg);
+}
+
+.app-menu-list a.active {
+    background-color: var(--color-day);
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+.app-main {
+    flex: 1;
+    min-width: 0;
+    padding: 24px;
+}
+
+/* 役割ラベル（バイト＝緑、店長＝オレンジ、管理者＝灰） */
+.role-label {
+    display: inline-block;
+    padding: 2px 12px;
+    border-radius: 4px;
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+.role-staff {
+    background-color: var(--color-day);
+}
+
+.role-manager {
+    background-color: var(--color-evening);
+}
+
+.role-admin {
+    background-color: var(--color-admin);
+}
+
+/* シフトのバッジ（20-00 4章） */
+.shift-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.shift-badge-time {
+    margin-left: 2px;
+}
+
+.badge-day {
+    background-color: var(--color-day);
+    color: #FFFFFF;
+}
+
+.badge-evening {
+    background-color: var(--color-evening);
+    color: #FFFFFF;
+}
+
+.badge-time {
+    background: linear-gradient(to right, var(--color-day), var(--color-evening));
+    color: #FFFFFF;
+}
+
+.badge-pending {
+    background-color: var(--color-pending);
+    color: var(--color-pending-text);
+}
+
+.badge-absent {
+    background-color: #FFFFFF;
+    color: var(--color-absent);
+    border: 1px solid var(--color-absent);
+    text-decoration: line-through;
+}
+
+/* チャットの吹き出し（SB-06・SM-11 で共用） */
+.chat-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+}
+
+.chat-mine {
+    align-items: flex-end;
+}
+
+.chat-other {
+    align-items: flex-start;
+}
+
+.chat-sender {
+    font-size: 0.8rem;
+    color: #6C757D;
+}
+
+.chat-bubble {
+    max-width: 75%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.chat-mine .chat-bubble {
+    background-color: var(--color-day);
+    color: #FFFFFF;
+}
+
+.chat-other .chat-bubble {
+    background-color: #FFFFFF;
+    border: 1px solid var(--color-border);
+}
+
+.chat-time {
+    font-size: 0.75rem;
+    color: #6C757D;
+}
+
+/* タブレット（768〜1023px）：メニューの幅 180px */
+@media (min-width: 768px) {
+    .app-menu {
+        flex: 0 0 var(--menu-width-tablet);
+        width: var(--menu-width-tablet);
+    }
+}
+
+/* PC（1024px 以上）：メニューの幅 220px */
+@media (min-width: 1024px) {
+    .app-menu {
+        flex: 0 0 var(--menu-width-pc);
+        width: var(--menu-width-pc);
+    }
+}
+
+/* スマホ（767px 以下）：本文の余白を小さくする */
+@media (max-width: 767.98px) {
+    .app-main {
+        padding: 16px;
+    }
+}
+
+/* 印刷：ヘッダー・メニュー・印刷しないボタンを出さない */
+@media print {
+    .app-header,
+    .app-menu,
+    .stripe,
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        background-color: #FFFFFF;
+    }
+}
+
+/* ===== SC-01 ログイン（川端） ===== */
+
+/* ===== SC-02 お知らせ一覧（新井） ===== */
+
+/* ===== SC-03 アカウント設定（川端） ===== */
+
+/* ===== SB-01 ホーム（新井） ===== */
+
+/* ===== SB-02 シフトカレンダー（新井） ===== */
+
+/* ===== SB-03 シフト希望提出（栗原） ===== */
+
+/* ===== SB-04 みんなのシフト（新井） ===== */
+
+/* ===== SB-05 設定（新井） ===== */
+
+/* ===== SB-06 チャット（栗原） ===== */
+
+/* ===== SM-01 ダッシュボード（新井） ===== */
+
+/* ===== SM-02 スタッフ一覧（栗原） ===== */
+
+/* ===== SM-03 スタッフ登録・編集（栗原） ===== */
+
+/* ===== SM-04 職能管理（川端） ===== */
+
+/* ===== SM-05 必要人数設定（新井） ===== */
+
+/* ===== SM-06 シフト作成（栗原） ===== */
+
+/* ===== SM-06-1 希望の代理修正（栗原） ===== */
+
+/* ===== SM-07 欠勤登録（新井） ===== */
+
+/* ===== SM-08 印刷用シフト表（栗原） ===== */
+
+/* ===== SM-09 店舗設定（新井） ===== */
+
+/* ===== SM-10 チャット一覧（栗原） ===== */
+
+/* ===== SM-11 チャット（栗原） ===== */
+
+/* ===== SA-01 管理メニュー（新井） ===== */
+
+/* ===== SA-02 店長アカウント管理（新井） ===== */
+
+/* ===== SA-03 操作ログ（新井） ===== */
+
+/* ===== SA-04 バックアップ（新井） ===== */
+
+/* ===== ER-01・ER-02 エラー（新井） ===== */

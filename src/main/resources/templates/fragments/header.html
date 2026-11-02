@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- 共通のヘッダー（20-00 3.1）。値は GlobalModelAdvice が入れる -->
+    <header th:fragment="header" class="app-header">
+        <button type="button" class="btn app-menu-toggle d-md-none" data-bs-toggle="offcanvas"
+                data-bs-target="#appMenu" aria-controls="appMenu" aria-label="メニュー">☰</button>
+        <img th:src="@{/images/logo.png}" alt="ロゴ" class="app-logo" onerror="this.style.display='none'"
+             width="40" height="40">
+        <span class="app-title">シフト管理システム</span>
+        <div class="app-header-right">
+            <span class="app-store d-none d-md-inline" th:text="${storeName}">店舗名</span>
+            <a class="app-bell" th:href="@{/notices}" aria-label="お知らせ">🔔<span class="app-bell-count"
+                    th:if="${unreadCount > 0}" th:text="${unreadCount}">3</span></a>
+            <th:block th:if="${loginUser != null}">
+                <span class="app-avatar" th:text="${#strings.substring(loginUser.name, 0, 1)}">山</span>
+                <span class="app-user-name d-none d-md-inline" th:text="${loginUser.name}">名前</span>
+            </th:block>
+            <form class="d-none d-md-inline" th:action="@{/logout}" method="post">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">ログアウト</button>
+            </form>
+        </div>
+    </header>
+</body>
+</html>
