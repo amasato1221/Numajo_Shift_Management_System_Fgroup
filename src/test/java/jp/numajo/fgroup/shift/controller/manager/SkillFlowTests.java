@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
@@ -33,7 +34,7 @@ import jp.numajo.fgroup.shift.security.LoginUser;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 職能管理の流れの結合テスト（20-SM-04 6章 No.2〜7、97_テスト計画書 4.2）。
+ * 職能管理の流れの結合テスト（20-SM-04 6章 No.2〜8、97_テスト計画書 4.2）。
  *
  * <p>
  * shift_test の DB と本物の SecurityConfig・SkillService を使う。成功・業務エラーはリダイレクトだけを確かめる。
@@ -121,6 +122,18 @@ class SkillFlowTests {
 
         assertThat(skillId("fkレジ")).isNotNull();
         assertThat(logCount("SKILL_CREATE")).isEqualTo(1);
+    }
+
+    @Test
+    void 職能がある状態で画面を開く_一覧の各欄にスマホ用の見出し名が付く() throws Exception {
+        addSkill("fkレジ");
+
+        String html = mvc.perform(get("/manager/skills").with(user(manager)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(html).contains("data-label=\"職能名\"", "data-label=\"説明\"",
+                "data-label=\"持っている人数\"", "data-label=\"操作\"");
     }
 
     @Test

@@ -16,7 +16,7 @@
             <div class="card-body">
                 <p class="mb-0" th:if="${#lists.isEmpty(skills)}" th:text="#{I2401}"></p>
                 <div class="table-responsive" th:unless="${#lists.isEmpty(skills)}">
-                    <table class="table align-middle">
+                    <table class="table align-middle skill-table">
                         <thead>
                             <tr>
                                 <th>職能名</th>
@@ -27,18 +27,18 @@
                         </thead>
                         <tbody>
                             <tr th:each="s : ${skills}">
-                                <td>
+                                <td data-label="職能名">
                                     <input type="text" name="name" class="form-control" maxlength="50"
                                            th:value="${s.name}" th:attr="form='skill-update-' + ${s.id}"
                                            th:aria-label="${s.name} + 'の職能名'">
                                 </td>
-                                <td>
+                                <td data-label="説明">
                                     <input type="text" name="description" class="form-control" maxlength="200"
                                            th:value="${s.description}" th:attr="form='skill-update-' + ${s.id}"
                                            th:aria-label="${s.name} + 'の説明'">
                                 </td>
-                                <td class="text-nowrap" th:text="${s.holderCount} + '人'"></td>
-                                <td class="text-nowrap">
+                                <td class="text-nowrap" data-label="持っている人数" th:text="${s.holderCount} + '人'"></td>
+                                <td class="text-nowrap" data-label="操作">
                                     <form th:id="'skill-update-' + ${s.id}"
                                           th:action="@{/manager/skills/{id}(id=${s.id})}" method="post"
                                           class="d-inline"></form>
