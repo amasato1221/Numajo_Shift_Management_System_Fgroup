@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-05 |
-| 版 | 第1.2版（令和8年11月2日） |
+| 版 | 第1.4版（令和8年11月5日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -13,6 +13,8 @@
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
 | 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：StaffService#update の戻り値を int にし、ShiftWarningService#calculate に today を追加（M7） | 新井 |
 | 1.2 | 令和8年11月2日 | 実装中の質問（栗原）を反映：ShiftRequestService#proxySubmit の戻り値を String（対象のバイトの氏名）にし、getProxyPage の periodOptions を空のリストにした | 新井 |
+| 1.3 | 令和8年11月3日 | 実装中の質問（川端）を反映：PeriodService の findOptionsForStaff・findOptionsForManager の表示名と、resolveDefault・defaultPeriodForManager が null を返すときを書いた | 新井 |
+| 1.4 | 令和8年11月5日 | 0章の「メッセージの文」の決まりに、期間の表示名・状態名・ICS の件名など短い表示用の文字は Service に書いてよいことを足した（3.5 の表示名との食い違いを直した） | 新井 |
 
 ## 0. service の決まり
 
@@ -26,6 +28,7 @@
 | お知らせ | 作るのは `NotificationService` だけ。ほかの Service はそのメソッドを呼ぶ |
 | 日時 | `Clock clock` を受け取り、`LocalDateTime.now(clock)` |
 | メッセージの文 | Service の中で文を組み立てるとき（お知らせの本文など）は `MessageSource#getMessage(コード, 引数, Locale.JAPAN)` を使い、日本語を直接書かない |
+| 表示用の短い文字 | 上の決まりは「文」（93_メッセージ一覧にある、お知らせ・アラートなどに出す文）が対象。選択肢の表示名（3.5 の「11/1〜11/15（期限 10/15）」）、enum の `label`（「作成中」など）、ICS の件名・カレンダー名（20-IC-01 3章の「日勤 8:00-17:00」「シフト（{氏名}）」）のように、設計書に形が決めてある短い表示用の文字は、Service や enum に直接書いてよい |
 
 各メソッドの手順は「手順」の列の詳細設計書の章に書いてあります。ここには、引数・戻り値・トランザクション・主な依存だけを書きます。
 
@@ -199,16 +202,16 @@
 
 | メソッド | Tx | 手順 |
 | --- | --- | --- |
-| `List<PeriodOption> findOptionsForStaff()` | 読取 | 20-SB-02 2.1-1 |
-| `ShiftPeriod resolveDefault(List<PeriodOption> options, Long periodId)` | 読取 | 20-SB-02 2.1-2 |
+| `List<PeriodOption> findOptionsForStaff()` | 読取 | 20-SB-02 2.1-1。表示名（`label`）は「10/16〜10/31」（`DateTimeUtil.period`） |
+| `ShiftPeriod resolveDefault(List<PeriodOption> options, Long periodId)` | 読取 | 20-SB-02 2.1-2。`periodId` がなく選択肢が0件なら `null`（Controller が I1202 を出す）。`periodId` があるのに選択肢にないときは、選択肢が0件でも `ResourceNotFoundException` |
 | `boolean isAcceptingRequests(ShiftPeriod period)` | － | `status == OPEN && !now.isAfter(deadlineAt)` |
-| `ShiftPeriod defaultPeriodForManager()` | 読取 | 20-SM-06 3.1 |
-| `List<PeriodOption> findOptionsForManager()` | 読取 | 20-SM-06 2 の No.1 |
+| `ShiftPeriod defaultPeriodForManager()` | 読取 | 20-SM-06 3.1。どの期間もなければ `null`（Controller が I2605 を出す） |
+| `List<PeriodOption> findOptionsForManager()` | 読取 | 20-SM-06 2 の No.1。表示名（`label`）は「11/1〜11/15（作成中）」（`DateTimeUtil.period` ＋ `PeriodStatus` の `label`） |
 | `ShiftPeriod getPeriod(Long id)` | 読取 | なければ `ResourceNotFoundException` |
 | `int createUpcomingPeriods(LocalDate today)` | 更新 | BT-01（95_通知・定期処理設計書 2章）。戻り値は作った数 |
 | `int closeExpiredPeriods(LocalDateTime now)` | 更新 | BT-02（95_通知・定期処理設計書 3章）。戻り値は締めた数 |
 | `static LocalDateTime deadlineOf(LocalDate startDate)` | － | 10_基本設計書 6.1 の期限の決め方 |
-| `static PeriodOption toOption(ShiftPeriod p)` | － | 表示名「11/1〜11/15（期限 10/15）」を入れる |
+| `static PeriodOption toOption(ShiftPeriod p)` | － | 表示名「11/1〜11/15（期限 10/15）」を入れる（上の2つ以外の画面で使う形） |
 
 ### 3.6 `AssignmentService`
 

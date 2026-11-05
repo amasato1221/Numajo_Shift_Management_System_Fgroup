@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-08 |
-| 版 | 第1.1版（令和8年10月22日） |
+| 版 | 第1.2版（令和8年11月3日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -12,6 +12,7 @@
 | --- | --- | --- | --- |
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
 | 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：DateTimeUtil に5つの形式を追加（L4）。GlobalExceptionHandler で必須パラメーターの欠落・HTTPメソッド違いも404にした（L13）。どちらも単体テストで命令・分岐とも100%を確認 | 新井 |
+| 1.2 | 令和8年11月3日 | 実装中の質問（川端）を反映：scheduler の2クラスに `@Profile("!test")` を付け、テストの中で定期処理が動かないようにした。scheduler のテストを Spring を起動しない単体テストにした | 新井 |
 
 このページの exception と util のコードは**全文**です（scheduler は 4章の形で書きます）。そのまま写してください（30-00 1章）。
 
@@ -561,6 +562,8 @@ public record ProcessResult(int exitCode, boolean timedOut, String output) {
 
 定期処理の中身は Service に書き、scheduler のクラスは「いつ呼ぶか」だけを書きます。起動時にも1回動かします（PCを夜に切っていて 0:05 に動かなかった日のため）。
 
+scheduler のクラスには `@Profile("!test")` を付け、テスト（`@ActiveProfiles("test")`）の中では Bean を作りません。付けないと、`@SpringBootTest` のテストクラスが起動するたびに `onStartup()` が BT-01 を動かし、テストのトランザクションの外で `shift_test` に期間を作ってしまいます（ロールバックされずに残り、テストで保存する期間と開始日が重なったり、実行した日でテストの結果が変わったりする）。cron の時刻にテストを動かしていても同じことが起きないよう、BT-03 のクラスにも付けます。
+
 ```java
 package jp.numajo.fgroup.shift.scheduler;
 
@@ -569,6 +572,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -578,10 +582,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 募集期間の作成（BT-01）と締切（BT-02）。
+ * 募集期間の作成（BT-01）と締切（BT-02）。テストの中では動かさない。
  */
 @Slf4j
 @Component
+@Profile("!test")
 @RequiredArgsConstructor
 public class PeriodScheduler {
 
@@ -617,6 +622,7 @@ package jp.numajo.fgroup.shift.scheduler;
 import java.time.Clock;
 import java.time.LocalDate;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -625,10 +631,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 締切が近い人へのお知らせ（BT-03）。
+ * 締切が近い人へのお知らせ（BT-03）。テストの中では動かさない。
  */
 @Slf4j
 @Component
+@Profile("!test")
 @RequiredArgsConstructor
 public class DeadlineNotificationScheduler {
 
@@ -645,4 +652,5 @@ public class DeadlineNotificationScheduler {
 ```
 
 - scheduler の中で例外が起きても、次の日には動きます（Spring がログに出して続ける）。例外を握りつぶす `try-catch` は書きません。
-- テストでは `@MockitoBean` で Service をモックにし、`onStartup()` が `closeExpiredPeriods` → `createUpcomingPeriods` の順に呼ぶことだけを確かめます。
+- テスト（`PeriodSchedulerTests`・`DeadlineNotificationSchedulerTests`）は、`test` プロファイルでは Bean ができないので、Spring を起動しない単体テストにします。`@ExtendWith(MockitoExtension.class)` で Service を `@Mock` にし、`Clock.fixed(...)` を渡して `new PeriodScheduler(periodService, clock)` のように作ります。確かめるのは、`onStartup()` が `closeExpiredPeriods` → `createUpcomingPeriods` の順に呼ぶこと（`InOrder`）と、`LocalDate.now(clock)`・`LocalDateTime.now(clock)` の値を渡すことです。
+- BT-01・BT-02・BT-03 の中身（DB に何ができるか）は、Service のテストで日時を引数で渡して確かめます（95_通知・定期処理設計書 6章）。
