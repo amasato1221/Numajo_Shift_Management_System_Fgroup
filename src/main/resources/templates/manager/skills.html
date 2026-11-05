@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='skills'">
+<head>
+    <title>職能管理</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <h1 class="h4 mb-4">職能管理</h1>
+
+        <!-- カード1：職能の一覧 -->
+        <div class="card mb-4">
+            <div class="card-header fw-bold">職能の一覧</div>
+            <div class="card-body">
+                <p class="mb-0" th:if="${#lists.isEmpty(skills)}" th:text="#{I2401}"></p>
+                <div class="table-responsive" th:unless="${#lists.isEmpty(skills)}">
+                    <table class="table align-middle skill-table">
+                        <thead>
+                            <tr>
+                                <th>職能名</th>
+                                <th>説明</th>
+                                <th class="text-nowrap">持っている人数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="s : ${skills}">
+                                <td data-label="職能名">
+                                    <input type="text" name="name" class="form-control" maxlength="50"
+                                           th:value="${s.name}" th:attr="form='skill-update-' + ${s.id}"
+                                           th:aria-label="${s.name} + 'の職能名'">
+                                </td>
+                                <td data-label="説明">
+                                    <input type="text" name="description" class="form-control" maxlength="200"
+                                           th:value="${s.description}" th:attr="form='skill-update-' + ${s.id}"
+                                           th:aria-label="${s.name} + 'の説明'">
+                                </td>
+                                <td class="text-nowrap" data-label="持っている人数" th:text="${s.holderCount} + '人'"></td>
+                                <td class="text-nowrap" data-label="操作">
+                                    <form th:id="'skill-update-' + ${s.id}"
+                                          th:action="@{/manager/skills/{id}(id=${s.id})}" method="post"
+                                          class="d-inline"></form>
+                                    <button type="submit" class="btn btn-success btn-sm"
+                                            th:attr="form='skill-update-' + ${s.id}">変更</button>
+                                    <form th:action="@{/manager/skills/{id}/delete(id=${s.id})}" method="post"
+                                          class="d-inline">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                th:data-confirm="#{C2401(${s.name}, ${s.holderCount})}">削除</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <hr>
+                <h2 class="h6 fw-bold">職能を追加する</h2>
+                <form th:action="@{/manager/skills}" th:object="${skillForm}" method="post">
+                    <div class="mb-3">
+                        <label for="newName" class="form-label">職能名</label>
+                        <input type="text" id="newName" th:field="*{name}" class="form-control" maxlength="50">
+                        <div class="text-danger small" th:if="${#fields.hasErrors('name')}"
+                             th:errors="*{name}"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newDescription" class="form-label">説明</label>
+                        <input type="text" id="newDescription" th:field="*{description}" class="form-control"
+                               maxlength="200">
+                        <div class="text-danger small" th:if="${#fields.hasErrors('description')}"
+                             th:errors="*{description}"></div>
+                    </div>
+                    <button type="submit" class="btn btn-success">追加</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- カード2：枠ごとの必要な職能 -->
+        <div class="card mb-4">
+            <div class="card-header fw-bold">枠ごとの必要な職能</div>
+            <div class="card-body">
+                <p class="text-muted">チェックがない枠は、職能がなくても入れます。</p>
+                <form th:action="@{/manager/skills/slot-required}" method="post">
+                    <div class="table-responsive" th:unless="${#lists.isEmpty(skills)}">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>職能</th>
+                                    <th class="text-center text-nowrap">☀日勤</th>
+                                    <th class="text-center text-nowrap">☾夕勤</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="s : ${skills}">
+                                    <td th:text="${s.name}"></td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="daySkillIds" class="form-check-input"
+                                               th:value="${s.id}"
+                                               th:checked="${slotSkillForm.daySkillIds.contains(s.id)}"
+                                               th:aria-label="${s.name} + 'を日勤の必須にする'">
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="eveningSkillIds" class="form-check-input"
+                                               th:value="${s.id}"
+                                               th:checked="${slotSkillForm.eveningSkillIds.contains(s.id)}"
+                                               th:aria-label="${s.name} + 'を夕勤の必須にする'">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="submit" class="btn btn-success">保存する</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -303,6 +303,43 @@ body {
 
 /* ===== SM-04 職能管理（川端） ===== */
 
+/* スマホの幅（767px以下）：一覧は表の見出しを隠し、1件ずつ縦に並べる（20-SM-04 1.1、20-00 3.1） */
+@media (max-width: 767.98px) {
+    .skill-table thead {
+        display: none;
+    }
+
+    .skill-table,
+    .skill-table > tbody,
+    .skill-table > tbody > tr,
+    .skill-table > tbody > tr > td {
+        display: block;
+        width: 100%;
+    }
+
+    .skill-table > tbody > tr {
+        margin-bottom: 12px;
+        padding: 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        background-color: #FFFFFF;
+    }
+
+    .skill-table > tbody > tr > td {
+        padding: 4px 0;
+        border: 0;
+        background-color: transparent;
+        box-shadow: none;
+    }
+
+    .skill-table > tbody > tr > td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.75rem;
+        color: #6C757D;
+    }
+}
+
 /* ===== SM-05 必要人数設定（新井） ===== */
 
 /* ===== SM-06 シフト作成（栗原） ===== */
