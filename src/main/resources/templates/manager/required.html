@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='required'">
+<head>
+    <title>必要人数設定</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <h1 class="h4 mb-4">必要人数設定</h1>
+
+        <!-- カード1：曜日ごとの既定値（20-SM-05 1.1） -->
+        <div class="card mb-4">
+            <div class="card-header fw-bold">曜日ごとの必要人数</div>
+            <div class="card-body">
+                <p class="text-muted">日付ごとの上書きがない日は、この人数を使います。</p>
+                <form th:action="@{/manager/required/defaults}" th:object="${requiredDefaultForm}" method="post">
+                    <div class="text-danger small mb-2" th:if="${#fields.hasErrors('dayCounts')}"
+                         th:errors="*{dayCounts}"></div>
+                    <div class="text-danger small mb-2" th:if="${#fields.hasErrors('eveningCounts')}"
+                         th:errors="*{eveningCounts}"></div>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>曜日</th>
+                                    <th class="text-nowrap">☀日勤</th>
+                                    <th class="text-nowrap">☾夕勤</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="i : ${#numbers.sequence(0, 6)}"
+                                    th:with="dayName=${{'日', '月', '火', '水', '木', '金', '土'}[i]}">
+                                    <th scope="row" th:text="${dayName}"
+                                        th:classappend="${i == 0} ? 'text-danger' : (${i == 6} ? 'text-primary' : '')">日</th>
+                                    <td>
+                                        <input type="number" min="0" max="20" class="form-control"
+                                               th:field="*{dayCounts[__${i}__]}"
+                                               th:aria-label="${dayName} + '曜日の日勤の人数'">
+                                        <div class="text-danger small" th:if="${#fields.hasErrors('dayCounts[__${i}__]')}"
+                                             th:errors="*{dayCounts[__${i}__]}"></div>
+                                    </td>
+                                    <td>
+                                        <input type="number" min="0" max="20" class="form-control"
+                                               th:field="*{eveningCounts[__${i}__]}"
+                                               th:aria-label="${dayName} + '曜日の夕勤の人数'">
+                                        <div class="text-danger small"
+                                             th:if="${#fields.hasErrors('eveningCounts[__${i}__]')}"
+                                             th:errors="*{eveningCounts[__${i}__]}"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="submit" class="btn btn-success">保存</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- カード2：日付ごとの上書き（20-SM-05 1.2） -->
+        <div class="card mb-4">
+            <div class="card-header fw-bold">日付ごとの上書き</div>
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
+                    <a class="btn btn-outline-secondary btn-sm" th:href="@{/manager/required(ym=${prevYm})}"
+                       aria-label="前の月">〈</a>
+                    <span class="fw-bold" th:text="${ym.year} + '年' + ${ym.monthValue} + '月'">2026年11月</span>
+                    <a class="btn btn-outline-secondary btn-sm" th:href="@{/manager/required(ym=${nextYm})}"
+                       aria-label="次の月">〉</a>
+                </div>
+
+                <h2 class="h6 fw-bold">上書きを保存する</h2>
+                <form th:action="@{/manager/required/overrides}" th:object="${requiredOverrideForm}" method="post"
+                      class="row g-2 align-items-end mb-4">
+                    <input type="hidden" name="ym" th:value="${ym}">
+                    <div class="col-12 col-md-4">
+                        <label for="overrideWorkDate" class="form-label">日付</label>
+                        <input type="date" id="overrideWorkDate" th:field="*{workDate}" class="form-control">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label for="overrideSlotId" class="form-label">枠</label>
+                        <select id="overrideSlotId" th:field="*{slotId}" class="form-select">
+                            <option value="1">☀日勤</option>
+                            <option value="2">☾夕勤</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label for="overrideCount" class="form-label">人数</label>
+                        <input type="number" id="overrideCount" min="0" max="20" th:field="*{requiredCount}"
+                               class="form-control">
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <button type="submit" class="btn btn-success w-100">保存</button>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>日付</th>
+                                <th class="text-nowrap">☀日勤</th>
+                                <th class="text-nowrap">☾夕勤</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="d : ${days}" th:with="dow=${d.workDate.dayOfWeek.value}">
+                                <td class="text-nowrap"
+                                    th:classappend="${dow == 7} ? 'text-danger' : (${dow == 6} ? 'text-primary' : '')"
+                                    th:text="${T(jp.numajo.fgroup.shift.util.DateTimeUtil).monthDay(d.workDate)}">
+                                    11月1日(日)</td>
+                                <td>
+                                    <th:block th:replace="~{:: cell(${d.workDate}, 1, ${d.dayCount}, ${d.dayOverridden})}"/>
+                                </td>
+                                <td>
+                                    <th:block
+                                        th:replace="~{:: cell(${d.workDate}, 2, ${d.eveningCount}, ${d.eveningOverridden})}"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 一覧の1つのマス：人数と、上書きのときは「上書き」バッジと「戻す」ボタン -->
+    <th:block th:fragment="cell(workDate, slotId, count, overridden)">
+        <span th:text="${count} + '人'" th:classappend="${overridden} ? 'fw-bold'">0人</span>
+        <th:block th:if="${overridden}">
+            <span class="badge bg-warning text-dark">上書き</span>
+            <form th:action="@{/manager/required/overrides/delete}" method="post" class="d-inline">
+                <input type="hidden" name="workDate" th:value="${workDate}">
+                <input type="hidden" name="slotId" th:value="${slotId}">
+                <input type="hidden" name="ym" th:value="${ym}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">戻す</button>
+            </form>
+        </th:block>
+    </th:block>
+</body>
+</html>
