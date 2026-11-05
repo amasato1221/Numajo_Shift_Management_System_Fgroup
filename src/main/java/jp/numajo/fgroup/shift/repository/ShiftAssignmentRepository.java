@@ -83,11 +83,17 @@ public interface ShiftAssignmentRepository extends JpaRepository<ShiftAssignment
     List<ShiftAssignment> findPublishedForFeed(@Param("userId") Long userId, @Param("fromDate") LocalDate fromDate);
 
     /** 期間と割当IDで取得する（SM-06 の削除）。 */
-    @Query("SELECT a FROM ShiftAssignment a JOIN FETCH a.user LEFT JOIN FETCH a.slot WHERE a.id = :id AND a.period.id = :periodId")
+    @Query("""
+            SELECT a FROM ShiftAssignment a JOIN FETCH a.user LEFT JOIN FETCH a.slot
+            WHERE a.id = :id AND a.period.id = :periodId
+            """)
     Optional<ShiftAssignment> findByIdAndPeriodId(@Param("id") Long id, @Param("periodId") Long periodId);
 
     /** 割当IDで、期間・人・枠も一緒に取得する（SM-07）。 */
-    @Query("SELECT a FROM ShiftAssignment a JOIN FETCH a.period JOIN FETCH a.user LEFT JOIN FETCH a.slot WHERE a.id = :id")
+    @Query("""
+            SELECT a FROM ShiftAssignment a JOIN FETCH a.period JOIN FETCH a.user LEFT JOIN FETCH a.slot
+            WHERE a.id = :id
+            """)
     Optional<ShiftAssignment> findDetailById(@Param("id") Long id);
 
     /** その日の ASSIGNED の割当（人数を数える。SM-01）。 */
