@@ -197,6 +197,77 @@ body {
     text-decoration: line-through;
 }
 
+/* シフトのカレンダー（SB-01・SB-02 で共用。98_実装計画書 6.3）
+   表は <table class="shift-calendar">、日付のマスは <td class="shift-calendar-day">。
+   今日は is-today、範囲外の日（SB-01 の前月・翌月、SB-02 の期間外）は is-outside、
+   土曜・日曜の見出しと日付は is-sat・is-sun を付ける。 */
+.shift-calendar {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    background-color: #FFFFFF;
+}
+
+.shift-calendar th {
+    padding: 6px 0;
+    text-align: center;
+    font-weight: normal;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+}
+
+.shift-calendar-day {
+    height: 96px;
+    padding: 4px;
+    vertical-align: top;
+    border: 1px solid var(--color-border);
+}
+
+.shift-calendar-date {
+    display: inline-block;
+    min-width: 1.8em;
+    margin-bottom: 4px;
+    text-align: center;
+}
+
+.shift-calendar .is-sat {
+    color: #0D6EFD;
+}
+
+.shift-calendar .is-sun {
+    color: var(--color-absent);
+}
+
+.shift-calendar-day.is-today {
+    outline: 2px solid var(--color-day);
+    outline-offset: -2px;
+}
+
+.shift-calendar-day.is-outside .shift-calendar-date {
+    color: #ADB5BD;
+}
+
+.shift-calendar-day .shift-badge {
+    display: block;
+    margin-bottom: 2px;
+    text-align: center;
+    white-space: normal;
+}
+
+/* スマホ幅は文字とマスを小さくする */
+@media (max-width: 767.98px) {
+    .shift-calendar-day {
+        height: 64px;
+        padding: 2px;
+        font-size: 0.8rem;
+    }
+
+    .shift-calendar-day .shift-badge {
+        padding: 1px 2px;
+        font-size: 0.7rem;
+    }
+}
+
 /* チャットの吹き出し（SB-06・SM-11 で共用） */
 .chat-row {
     display: flex;
