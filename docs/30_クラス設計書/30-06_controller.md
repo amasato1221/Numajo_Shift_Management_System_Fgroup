@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-06 |
-| 版 | 第1.1版（令和8年10月22日） |
+| 版 | 第1.2版（令和8年11月5日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -12,6 +12,7 @@
 | --- | --- | --- | --- |
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
 | 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：StringTrimmerEditor は SC-01 には効かないことを明記（L6） | 新井 |
+| 1.2 | 令和8年11月5日 | 2章：SB-04 の allShifts を StaffShiftController から StaffAllShiftController（`/staff/all-shifts`）に移した（SB-02 と持ち主が違うため。98 第1.8版） | 新井 |
 
 ## 0. controller の決まり
 
@@ -110,7 +111,7 @@ public class GlobalModelAdvice {
 | --- | --- | --- | --- | --- |
 | `StaffHomeController`（`/staff/home`） | `home` | GET | `String ym, LoginUser, Model` | 20-SB-01 |
 | `StaffShiftController`（`/staff`） | `shifts` | GET `/shifts` | `Long periodId, LoginUser, Model` | 20-SB-02 |
-| 〃 | `allShifts` | GET `/all-shifts` | `Long periodId, LoginUser, Model, RedirectAttributes` | 20-SB-04 |
+| `StaffAllShiftController`（`/staff/all-shifts`） | `allShifts` | GET | `Long periodId, LoginUser, Model, RedirectAttributes` | 20-SB-04 |
 | `StaffRequestController`（`/staff/requests`） | `show` | GET | `Long periodId, LoginUser, Model` | 20-SB-03 3.1 |
 | 〃 | `submit` | POST | `ShiftRequestForm, BindingResult, LoginUser, Model, RedirectAttributes` | 20-SB-03 3.2 |
 | 〃 | `cancel` | POST `/cancel` | `Long periodId, LoginUser, RedirectAttributes` | 20-SB-03 3.3 |
