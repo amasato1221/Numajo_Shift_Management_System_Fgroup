@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='staff'">
+<head>
+    <title>スタッフ一覧</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0">スタッフ一覧</h1>
+        <a class="btn btn-primary" th:href="@{/manager/staff/new}">追加</a>
+    </div>
+
+    <form method="get" th:action="@{/manager/staff}" class="row g-2 mb-3">
+        <div class="col-12 col-md">
+            <label for="keyword" class="visually-hidden">検索</label>
+            <input type="text" id="keyword" name="keyword" class="form-control" maxlength="50"
+                   placeholder="氏名・ふりがな・ログインID" th:value="${keyword}">
+        </div>
+        <div class="col-8 col-md-3">
+            <label for="status" class="visually-hidden">状態</label>
+            <select id="status" name="status" class="form-select">
+                <option value="ALL" th:selected="${status == 'ALL'}">すべて</option>
+                <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">有効</option>
+                <option value="INACTIVE" th:selected="${status == 'INACTIVE'}">無効</option>
+            </select>
+        </div>
+        <div class="col-4 col-md-auto">
+            <button type="submit" class="btn btn-outline-primary w-100">検索</button>
+        </div>
+    </form>
+
+    <p class="text-muted" th:text="|${#lists.size(staffList)}人|">20人</p>
+
+    <p th:if="${#lists.isEmpty(staffList)}" th:text="#{I2201}">該当するスタッフはいません。</p>
+
+    <div class="table-responsive" th:unless="${#lists.isEmpty(staffList)}">
+        <table class="table table-hover align-middle">
+            <thead>
+            <tr>
+                <th>氏名</th>
+                <th>ふりがな</th>
+                <th>ログインID</th>
+                <th>職能</th>
+                <th>研修中</th>
+                <th>状態</th>
+                <th>ロック</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${staffList}">
+                <td><a th:href="@{/manager/staff/{id}(id=${row.id})}" th:text="${row.name}">山田 太郎</a></td>
+                <td th:text="${row.nameKana}">やまだ たろう</td>
+                <td th:text="${row.loginId}">yamada</td>
+                <td>
+                    <span class="badge text-bg-secondary me-1" th:each="skillName : ${row.skillNames}"
+                          th:text="${skillName}">レジ</span>
+                </td>
+                <td><span class="badge text-bg-warning" th:if="${row.trainee}">研修中</span></td>
+                <td>
+                    <span class="badge text-bg-success" th:if="${row.active}">有効</span>
+                    <span class="badge text-bg-secondary" th:unless="${row.active}">無効</span>
+                </td>
+                <td><span class="badge text-bg-danger" th:if="${row.locked}">ロック中</span></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
