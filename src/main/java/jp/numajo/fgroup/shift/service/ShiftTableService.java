@@ -1,5 +1,6 @@
 package jp.numajo.fgroup.shift.service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import jp.numajo.fgroup.shift.constant.AssignmentStatus;
 import jp.numajo.fgroup.shift.constant.BadgeType;
+import jp.numajo.fgroup.shift.constant.PeriodStatus;
 import jp.numajo.fgroup.shift.dto.ShiftBadge;
 import jp.numajo.fgroup.shift.dto.ShiftTable;
 import jp.numajo.fgroup.shift.dto.ShiftTableRow;
@@ -23,7 +25,9 @@ import jp.numajo.fgroup.shift.entity.ShiftAssignment;
 import jp.numajo.fgroup.shift.entity.ShiftPeriod;
 import jp.numajo.fgroup.shift.entity.Slot;
 import jp.numajo.fgroup.shift.entity.User;
+import jp.numajo.fgroup.shift.exception.ResourceNotFoundException;
 import jp.numajo.fgroup.shift.repository.ShiftAssignmentRepository;
+import jp.numajo.fgroup.shift.repository.ShiftPeriodRepository;
 import jp.numajo.fgroup.shift.repository.SlotRepository;
 import jp.numajo.fgroup.shift.repository.UserRepository;
 import jp.numajo.fgroup.shift.util.ShiftTimeUtil;
@@ -45,6 +49,44 @@ public class ShiftTableService {
     private final ShiftAssignmentRepository shiftAssignmentRepository;
     private final UserRepository userRepository;
     private final SlotRepository slotRepository;
+    private final ShiftPeriodRepository shiftPeriodRepository;
+    private final Clock clock;
+
+    /**
+     * SB-04 の期間の選択肢（20-SB-04 2.1-2）。公開済みで、開始日が今日の3か月前の1日以降。新しい順。
+     *
+     * @return 公開済みの期間（新しい順）
+     */
+    public List<ShiftPeriod> findPublishedPeriods() {
+        LocalDate from = LocalDate.now(clock).minusMonths(3).withDayOfMonth(1);
+        return shiftPeriodRepository.findByStatusAndStartDateGreaterThanEqualOrderByStartDateDesc(
+                PeriodStatus.PUBLISHED, from);
+    }
+
+    /**
+     * SB-04 で表示する期間を決める（20-SB-04 2.1-3）。
+     *
+     * @param periods  {@link #findPublishedPeriods()} の結果（新しい順）
+     * @param periodId 指定された期間のID（なければ null）
+     * @return 指定の期間 → 今日を含む期間 → 一番新しい期間の順で決めた期間。選択肢が0件なら null
+     * @throws ResourceNotFoundException periodId が選択肢にないとき（未公開・古すぎる・存在しない）
+     */
+    public ShiftPeriod choosePeriod(List<ShiftPeriod> periods, Long periodId) {
+        if (periodId != null) {
+            return periods.stream().filter(p -> p.getId().equals(periodId)).findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("period id=" + periodId));
+        }
+        if (periods.isEmpty()) {
+            return null;
+        }
+        LocalDate today = LocalDate.now(clock);
+        for (ShiftPeriod p : periods) {
+            if (!p.getStartDate().isAfter(today) && !p.getEndDate().isBefore(today)) {
+                return p;
+            }
+        }
+        return periods.get(0);
+    }
 
     /**
      * 期間のシフト表を作る（20-SB-04 2.1-4、20-SM-08 3.1-2）。

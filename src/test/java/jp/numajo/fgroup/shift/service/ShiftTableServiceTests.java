@@ -1,13 +1,17 @@
 package jp.numajo.fgroup.shift.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,7 +33,9 @@ import jp.numajo.fgroup.shift.entity.ShiftAssignment;
 import jp.numajo.fgroup.shift.entity.ShiftPeriod;
 import jp.numajo.fgroup.shift.entity.Slot;
 import jp.numajo.fgroup.shift.entity.User;
+import jp.numajo.fgroup.shift.exception.ResourceNotFoundException;
 import jp.numajo.fgroup.shift.repository.ShiftAssignmentRepository;
+import jp.numajo.fgroup.shift.repository.ShiftPeriodRepository;
 import jp.numajo.fgroup.shift.repository.SlotRepository;
 import jp.numajo.fgroup.shift.repository.UserRepository;
 
@@ -49,6 +55,8 @@ import jp.numajo.fgroup.shift.repository.UserRepository;
  *   toRow                ：U＝割当がその人のもの、S＝出勤（ASSIGNED）
  *   slotCounts           ：B＝バッジが欠勤、O＝枠と時間が重なる
  *   namesOn              ：Y＝バッジの種類が同じ、T＝時間の表示がある（時間指定）
+ *   choosePeriod         ：I＝periodId がある、L＝periodId が選択肢にある、E＝選択肢が0件、
+ *                          F＝期間の開始日が今日以前、T＝期間の終了日が今日以後（今日を含む＝F真 かつ T真）
  *
  * No. | メソッド    | 判定の値                                   | 結果
  *  1  | build      | I偽 A偽 ／ I偽 A真                          | 出勤だけ出す、欠勤は出さない
@@ -69,6 +77,13 @@ import jp.numajo.fgroup.shift.repository.UserRepository;
  * 16  | slotCounts | 2人が同じ日・同じ枠／割当のない日                  | 足し合わせる／全部の日・枠に 0
  * 17  | namesOn    | Y真 T偽 ／ Y真 T真 ／ Y偽                       | 名前／名前＋時間／入れない
  * 18  | namesOn    | その日の割当がない人・誰もいない日                  | 空
+ * 19  | findPublishedPeriods | －                               | 公開済み・今日の3か月前の1日（8/1）以降で取る
+ * 20  | choosePeriod | I真 L真                                  | その期間
+ * 21  | choosePeriod | I真 L偽                                  | ResourceNotFoundException
+ * 22  | choosePeriod | I真 L偽 E真                               | ResourceNotFoundException
+ * 23  | choosePeriod | I偽 E真                                  | null（I1401）
+ * 24  | choosePeriod | I偽 E偽：P3 F偽 → P2 F真 T真                | 今日を含む P2
+ * 25  | choosePeriod | I偽 E偽：P5 F真 T偽 → P4 F真 T偽（含む期間なし） | 先頭（一番新しい P5）
  *
  * 除外：A の値は ASSIGNED と ABSENT の2つだけなので、「A偽」は出勤と同じ。
  * slotCounts で表の外の日のバッジは、build が期間の割当しか入れないのでありえない。
@@ -81,6 +96,7 @@ class ShiftTableServiceTests {
     private final ShiftAssignmentRepository assignmentRepository = mock(ShiftAssignmentRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
     private final SlotRepository slotRepository = mock(SlotRepository.class);
+    private final ShiftPeriodRepository periodRepository = mock(ShiftPeriodRepository.class);
 
     private final Slot daySlot = slot(SlotIds.DAY, "08:00", "17:00");
     private final Slot eveningSlot = slot(SlotIds.EVENING, "17:00", "22:00");
@@ -91,7 +107,9 @@ class ShiftTableServiceTests {
 
     @BeforeEach
     void setUp() {
-        service = new ShiftTableService(assignmentRepository, userRepository, slotRepository);
+        Clock clock = Clock.fixed(LocalDateTime.parse("2026-11-06T09:00:00").atZone(ZoneId.of("Asia/Tokyo"))
+                .toInstant(), ZoneId.of("Asia/Tokyo"));
+        service = new ShiftTableService(assignmentRepository, userRepository, slotRepository, periodRepository, clock);
         when(slotRepository.findAll(any(Sort.class))).thenReturn(List.of(daySlot, eveningSlot));
         when(userRepository.findActiveStaff()).thenReturn(List.of());
         when(assignmentRepository.findByPeriodIdWithUser(PERIOD_ID)).thenReturn(List.of());
@@ -320,6 +338,60 @@ class ShiftTableServiceTests {
         assertThat(table.namesOn(d("2026-11-02"), BadgeType.DAY)).isEmpty();
     }
 
+    // ---------------------------------------------------------------- 期間の選択肢・表示する期間
+
+    @Test
+    void 選択肢_公開済みで今日の3か月前の1日以降を取る() {
+        List<ShiftPeriod> periods = List.of(period(3L, "2026-11-16", "2026-11-30"));
+        when(periodRepository.findByStatusAndStartDateGreaterThanEqualOrderByStartDateDesc(PeriodStatus.PUBLISHED,
+                d("2026-08-01"))).thenReturn(periods);
+
+        assertThat(service.findPublishedPeriods()).isEqualTo(periods);
+    }
+
+    @Test
+    void 表示する期間_選択肢にある期間を指定_その期間() {
+        ShiftPeriod p1 = period(1L, "2026-10-16", "2026-10-31");
+        ShiftPeriod p2 = period(2L, "2026-11-01", "2026-11-15");
+
+        assertThat(service.choosePeriod(List.of(p2, p1), 1L)).isSameAs(p1);
+    }
+
+    @Test
+    void 表示する期間_選択肢にない期間を指定_見つからない例外() {
+        List<ShiftPeriod> periods = List.of(period(2L, "2026-11-01", "2026-11-15"));
+
+        assertThatThrownBy(() -> service.choosePeriod(periods, 99L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void 表示する期間_選択肢が0件で期間を指定_見つからない例外() {
+        assertThatThrownBy(() -> service.choosePeriod(List.of(), 1L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void 表示する期間_選択肢が0件で指定なし_null() {
+        assertThat(service.choosePeriod(List.of(), null)).isNull();
+    }
+
+    @Test
+    void 表示する期間_指定なし_今日を含む期間() {
+        ShiftPeriod p3 = period(3L, "2026-11-16", "2026-11-30");
+        ShiftPeriod p2 = period(2L, "2026-11-01", "2026-11-15");
+
+        assertThat(service.choosePeriod(List.of(p3, p2), null)).isSameAs(p2);
+    }
+
+    @Test
+    void 表示する期間_指定なしで今日を含む期間がない_一番新しい期間() {
+        ShiftPeriod p5 = period(5L, "2026-10-16", "2026-11-05");
+        ShiftPeriod p4 = period(4L, "2026-10-01", "2026-10-15");
+
+        assertThat(service.choosePeriod(List.of(p5, p4), null)).isSameAs(p5);
+    }
+
     // ---------------------------------------------------------------- 準備
 
     private void givenActive(User... users) {
@@ -336,6 +408,15 @@ class ShiftTableServiceTests {
         s.setStartTime(t(start));
         s.setEndTime(t(end));
         return s;
+    }
+
+    private static ShiftPeriod period(Long id, String start, String end) {
+        ShiftPeriod p = new ShiftPeriod();
+        p.setId(id);
+        p.setStartDate(d(start));
+        p.setEndDate(d(end));
+        p.setStatus(PeriodStatus.PUBLISHED);
+        return p;
     }
 
     private static ShiftPeriod period() {
