@@ -202,6 +202,18 @@ class UtilTests {
     }
 
     @Test
+    void dayOfWeek_曜日だけ() {
+        assertThat(DateTimeUtil.dayOfWeek(LocalDate.of(2026, 11, 1))).isEqualTo("日");
+        assertThat(DateTimeUtil.dayOfWeek(LocalDate.of(2026, 11, 7))).isEqualTo("土");
+    }
+
+    @Test
+    void shortDateWithDay_月日と曜日を0埋めしない() {
+        assertThat(DateTimeUtil.shortDateWithDay(LocalDate.of(2026, 11, 1))).isEqualTo("11/1(日)");
+        assertThat(DateTimeUtil.shortDateWithDay(LocalDate.of(2026, 12, 16))).isEqualTo("12/16(水)");
+    }
+
+    @Test
     void shortYearDate_年月日を0埋めしない() {
         String actual = DateTimeUtil.shortYearDate(LocalDate.of(2025, 12, 3));
 

@@ -36,6 +36,7 @@ import jp.numajo.fgroup.shift.entity.ShiftPeriod;
 import jp.numajo.fgroup.shift.entity.Slot;
 import jp.numajo.fgroup.shift.entity.User;
 import jp.numajo.fgroup.shift.security.LoginUser;
+import jp.numajo.fgroup.shift.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -95,6 +96,9 @@ class AllShiftsFlowTests {
         // スマホのカード
         assertThat(html).contains("☀日勤：全員テスト自分", "☾夕勤：全員テスト他人", "時間指定：全員テスト退職 13-22");
         assertThat(html).contains("data-auto-submit");
+        // 日付の表示は DateTimeUtil の形（表の見出しとスマホのカードの見出し）
+        assertThat(html).contains(">" + DateTimeUtil.shortDate(first) + "<", ">" + DateTimeUtil.dayOfWeek(first) + "<",
+                DateTimeUtil.shortDateWithDay(first));
     }
 
     @Test

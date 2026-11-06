@@ -40,7 +40,7 @@ import jp.numajo.fgroup.shift.repository.SlotRepository;
 import jp.numajo.fgroup.shift.repository.UserRepository;
 
 /**
- * ShiftTableService と ShiftTable#namesOn の単体テスト（20-SB-04 2.1-4、20-SM-08 3.1、97_テスト計画書 3.1）。
+ * ShiftTableService と ShiftTable（namesOn・日付の表示）の単体テスト（20-SB-04 2.1-4、20-SM-08 3.1、97_テスト計画書 3.1）。
  *
  * <p>
  * Repository はモックにする。期間は 2026-11-01〜11-03（3日）、枠は日勤 8:00-17:00・夕勤 17:00-22:00。
@@ -77,13 +77,14 @@ import jp.numajo.fgroup.shift.repository.UserRepository;
  * 16  | slotCounts | 2人が同じ日・同じ枠／割当のない日                  | 足し合わせる／全部の日・枠に 0
  * 17  | namesOn    | Y真 T偽 ／ Y真 T真 ／ Y偽                       | 名前／名前＋時間／入れない
  * 18  | namesOn    | その日の割当がない人・誰もいない日                  | 空
- * 19  | findPublishedPeriods | －                               | 公開済み・今日の3か月前の1日（8/1）以降で取る
- * 20  | choosePeriod | I真 L真                                  | その期間
- * 21  | choosePeriod | I真 L偽                                  | ResourceNotFoundException
- * 22  | choosePeriod | I真 L偽 E真                               | ResourceNotFoundException
- * 23  | choosePeriod | I偽 E真                                  | null（I1401）
- * 24  | choosePeriod | I偽 E偽：P3 F偽 → P2 F真 T真                | 今日を含む P2
- * 25  | choosePeriod | I偽 E偽：P5 F真 T偽 → P4 F真 T偽（含む期間なし） | 先頭（一番新しい P5）
+ * 19  | ShiftTable の表示 | －                                  | 見出しの日付・曜日・カードの見出しを DateTimeUtil の形で返す
+ * 20  | findPublishedPeriods | －                               | 公開済み・今日の3か月前の1日（8/1）以降で取る
+ * 21  | choosePeriod | I真 L真                                  | その期間
+ * 22  | choosePeriod | I真 L偽                                  | ResourceNotFoundException
+ * 23  | choosePeriod | I真 L偽 E真                               | ResourceNotFoundException
+ * 24  | choosePeriod | I偽 E真                                  | null（I1401）
+ * 25  | choosePeriod | I偽 E偽：P3 F偽 → P2 F真 T真                | 今日を含む P2
+ * 26  | choosePeriod | I偽 E偽：P5 F真 T偽 → P4 F真 T偽（含む期間なし） | 先頭（一番新しい P5）
  *
  * 除外：A の値は ASSIGNED と ABSENT の2つだけなので、「A偽」は出勤と同じ。
  * slotCounts で表の外の日のバッジは、build が期間の割当しか入れないのでありえない。
@@ -336,6 +337,15 @@ class ShiftTableServiceTests {
         ShiftTable table = table(row(1L, "2026-11-01", badge(BadgeType.DAY, "08:00", "17:00")));
 
         assertThat(table.namesOn(d("2026-11-02"), BadgeType.DAY)).isEmpty();
+    }
+
+    @Test
+    void 日付の表示_見出しの日付と曜日とカードの見出し() {
+        ShiftTable table = table();
+
+        assertThat(table.dateLabel(d("2026-11-01"))).isEqualTo("11/1");
+        assertThat(table.dayOfWeekLabel(d("2026-11-01"))).isEqualTo("日");
+        assertThat(table.cardLabel(d("2026-11-01"))).isEqualTo("11/1(日)");
     }
 
     // ---------------------------------------------------------------- 期間の選択肢・表示する期間

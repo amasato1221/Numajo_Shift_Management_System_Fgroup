@@ -10,7 +10,7 @@
     <!--
       SB-04 みんなのシフト（20-SB-04）。
       PC・タブレットはスタッフ×日付の表、スマホ（767px以下）は1日1枚のカード。
-      曜日は「月火水木金土日」の文字列から dayOfWeek（月＝1〜日＝7）で取り出す（言語の設定によらない）。
+      日付・曜日の文字列は ShiftTable（DateTimeUtil）で作る（91 の日付の表示）。土日の色は dayOfWeek（土＝6、日＝7）で付ける。
     -->
     <div layout:fragment="content">
         <h1 class="h4 mb-4">みんなのシフト</h1>
@@ -38,9 +38,9 @@
                                     <th class="all-shifts-name">氏名</th>
                                     <th th:each="day : ${table.days}"
                                         th:classappend="${day.dayOfWeek.value == 6} ? 'is-sat' : (${day.dayOfWeek.value == 7} ? 'is-sun' : '')">
-                                        <span class="d-block" th:text="${day.monthValue} + '/' + ${day.dayOfMonth}">11/1</span>
+                                        <span class="d-block" th:text="${table.dateLabel(day)}">11/1</span>
                                         <span class="d-block"
-                                              th:text="${#strings.substring('月火水木金土日', day.dayOfWeek.value - 1, day.dayOfWeek.value)}">日</span>
+                                              th:text="${table.dayOfWeekLabel(day)}">日</span>
                                     </th>
                                 </tr>
                             </thead>
@@ -68,8 +68,7 @@
                               timeNames=${table.namesOn(day, 'TIME')}">
                     <div class="card-header fw-bold"
                          th:classappend="${day.dayOfWeek.value == 6} ? 'is-sat' : (${day.dayOfWeek.value == 7} ? 'is-sun' : '')"
-                         th:text="${day.monthValue} + '/' + ${day.dayOfMonth} + '('
-                                  + ${#strings.substring('月火水木金土日', day.dayOfWeek.value - 1, day.dayOfWeek.value)} + ')'">11/1(日)</div>
+                         th:text="${table.cardLabel(day)}">11/1(日)</div>
                     <div class="card-body py-2">
                         <div th:if="${!dayNames.isEmpty()}"
                              th:text="'☀日勤：' + ${#strings.listJoin(dayNames, '、')}">☀日勤：山田、佐藤</div>
