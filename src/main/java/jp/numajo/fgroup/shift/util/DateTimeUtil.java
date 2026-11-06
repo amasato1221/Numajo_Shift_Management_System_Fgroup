@@ -21,6 +21,7 @@ public final class DateTimeUtil {
     private static final DateTimeFormatter DATE_TIME_SECONDS = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
     private static final DateTimeFormatter PRINT_START = DateTimeFormatter.ofPattern("yyyy/M/d(E)", Locale.JAPANESE);
     private static final DateTimeFormatter PRINT_END = DateTimeFormatter.ofPattern("M/d(E)", Locale.JAPANESE);
+    private static final DateTimeFormatter DAY_OF_WEEK = DateTimeFormatter.ofPattern("E", Locale.JAPANESE);
 
     private DateTimeUtil() {
     }
@@ -53,6 +54,16 @@ public final class DateTimeUtil {
     /** 例：10/15 */
     public static String shortDate(LocalDate date) {
         return date.format(SHORT_DATE);
+    }
+
+    /** 曜日だけ。例：土 */
+    public static String dayOfWeek(LocalDate date) {
+        return date.format(DAY_OF_WEEK);
+    }
+
+    /** 月日と曜日。例：11/1(日) */
+    public static String shortDateWithDay(LocalDate date) {
+        return date.format(PRINT_END);
     }
 
     /** 例：2025/12/3 */
