@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-05 |
-| 版 | 第1.4版（令和8年11月5日） |
+| 版 | 第1.5版（令和8年11月6日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -15,6 +15,7 @@
 | 1.2 | 令和8年11月2日 | 実装中の質問（栗原）を反映：ShiftRequestService#proxySubmit の戻り値を String（対象のバイトの氏名）にし、getProxyPage の periodOptions を空のリストにした | 新井 |
 | 1.3 | 令和8年11月3日 | 実装中の質問（川端）を反映：PeriodService の findOptionsForStaff・findOptionsForManager の表示名と、resolveDefault・defaultPeriodForManager が null を返すときを書いた | 新井 |
 | 1.4 | 令和8年11月5日 | 0章の「メッセージの文」の決まりに、期間の表示名・状態名・ICS の件名など短い表示用の文字は Service に書いてよいことを足した（3.5 の表示名との食い違いを直した） | 新井 |
+| 1.5 | 令和8年11月6日 | SB-01 の実装（PR #49）に合わせた：1.2 に NotificationService#toRow を足し、2.1 StaffHomeService の依存に SlotRepository を足した | 新井 |
 
 ## 0. service の決まり
 
@@ -50,6 +51,7 @@
 | --- | --- | --- |
 | `List<NoticeRow> findLatest(Long userId, int limit)` | 読取 | 20-SC-02 2.1（limit は 100 だけを使う。`findTop100…` を呼ぶ） |
 | `List<NoticeRow> findUnreadTop3(Long userId)` | 読取 | 20-SB-01 2.1-3 |
+| `static NoticeRow toRow(Notification n)` | － | お知らせを一覧の1行にする（20-SC-02 2.1-2）。本文が100文字を超えたら先頭100文字＋「…」、null は null のまま。`findLatest`・`findUnreadTop3` で使う |
 | `String open(Long userId, Long notificationId)` | 更新 | 20-SC-02 2.2。戻り値はリダイレクト先 |
 | `void readAll(Long userId)` | 更新 | 20-SC-02 2.3 |
 | `long countUnread(Long userId)` | 読取 | ヘッダーの未読数 |
@@ -90,7 +92,9 @@
 
 ### 2.1 `StaffHomeService`
 
-依存：`ShiftAssignmentRepository`、`ShiftPeriodRepository`、`NotificationService`、`ShiftCalendarService`、`Clock`
+依存：`ShiftAssignmentRepository`、`ShiftPeriodRepository`、`SlotRepository`、`NotificationService`、`ShiftCalendarService`、`Clock`
+
+`SlotRepository` は、次の出勤が時間指定のとき、重なる枠のアイコン（☀☾）を `ShiftCalendarService#toBadge(a, slots)` で決めるのに全部の枠が要るため使う（次の出勤があるときだけ `findAll(Sort.by("id"))` を呼ぶ）。
 
 | メソッド | Tx | 手順 |
 | --- | --- | --- |

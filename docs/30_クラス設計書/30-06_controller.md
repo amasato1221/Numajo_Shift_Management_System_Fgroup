@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-06 |
-| 版 | 第1.2版（令和8年11月5日） |
+| 版 | 第1.3版（令和8年11月6日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -13,6 +13,7 @@
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
 | 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：StringTrimmerEditor は SC-01 には効かないことを明記（L6） | 新井 |
 | 1.2 | 令和8年11月5日 | 2章：SB-04 の allShifts を StaffShiftController から StaffAllShiftController（`/staff/all-shifts`）に移した（SB-02 と持ち主が違うため。98 第1.8版） | 新井 |
+| 1.3 | 令和8年11月6日 | 2章：SB-01 の実装（PR #49）に合わせ、今月を `YearMonth.now(clock)` で決めるため StaffHomeController が Clock も受け取ることを書いた | 新井 |
 
 ## 0. controller の決まり
 
@@ -121,7 +122,7 @@ public class GlobalModelAdvice {
 | `StaffChatController`（`/staff/chat`） | `show` | GET | `LoginUser, Model` | 20-SB-06 2.1 |
 | 〃 | `send` | POST | `ChatForm, BindingResult, LoginUser, Model` | 20-SB-06 2.2 |
 
-`String ym`・`Long periodId` は `@RequestParam(required = false)`。`ym` は文字列で受け、Controller の中で `YearMonth.parse` し、失敗したら今月にします（`DateTimeParseException` を catch）。
+`String ym`・`Long periodId` は `@RequestParam(required = false)`。`ym` は文字列で受け、Controller の中で `YearMonth.parse` し、失敗したら今月にします（`DateTimeParseException` を catch）。今月は `YearMonth.now(clock)` で決めるので、`StaffHomeController` は `StaffHomeService` のほかに `Clock` も受け取ります（テストで今月を固定するため）。
 
 ## 3. controller.manager
 
