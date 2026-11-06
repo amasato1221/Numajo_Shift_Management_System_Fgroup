@@ -473,6 +473,33 @@ class ShiftRequestServiceTests {
         assertThat(actual.getMessageCode()).isEqualTo("E1305");
     }
 
+    @Test
+    void validateDays_日の入力にnullが混ざっていればE1302() {
+        List<DayRequestForm> days = allOk();
+        days.set(0, null);
+
+        assertThat(catchError(days, BOTH).getMessageCode()).isEqualTo("E1302");
+    }
+
+    @Test
+    void validateDays_日勤と夕勤以外の枠は値を見ない() {
+        Slot other = slot(3, "その他", LocalTime.of(22, 0), LocalTime.of(23, 0));
+        when(slotRepository.findAllWithRequiredSkills()).thenReturn(List.of(daySlot, eveningSlot, other));
+
+        assertThatCode(() -> service.validateDays(period, allOk(), BOTH)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void validateDays_時間指定の日に夕勤の値としてTIMEが入っていればE1302() {
+        givenSlots();
+        List<DayRequestForm> days = allOk();
+        DayRequestForm timeDay = timeDay(D1, LocalTime.of(13, 0), LocalTime.of(15, 0));
+        timeDay.setEveningShift(Availability.TIME);
+        days.set(0, timeDay);
+
+        assertThat(catchError(days, BOTH).getMessageCode()).isEqualTo("E1302");
+    }
+
     // ===== qualifiedSlotIds =====
 
     @Test
@@ -709,6 +736,20 @@ class ShiftRequestServiceTests {
         assertThat(actual.getDays().get(0).getMode()).isEqualTo(RequestMode.SLOT);
     }
 
+    @Test
+    void toForm_枠のない行や日勤と夕勤以外の枠の行は入れない() {
+        Slot other = slot(3, "その他", LocalTime.of(22, 0), LocalTime.of(23, 0));
+        when(shiftRequestRepository.findByPeriodIdAndUserId(1L, USER_ID)).thenReturn(List.of(
+                row(D1, null, Availability.OK, null, null), row(D1, other, Availability.OK, null, null)));
+
+        ShiftRequestForm actual = service.toForm(USER_ID, period);
+
+        DayRequestForm first = actual.getDays().get(0);
+        assertThat(first.getMode()).isEqualTo(RequestMode.SLOT);
+        assertThat(first.getDayShift()).isNull();
+        assertThat(first.getEveningShift()).isNull();
+    }
+
     // ===== submit =====
 
     private void givenSubmittable() {
@@ -805,6 +846,24 @@ class ShiftRequestServiceTests {
         service.submit(USER_ID, form(days));
 
         assertThat(savedRows()).hasSize(3).allMatch(r -> r.getSlot().getId() == 1);
+    }
+
+    @Test
+    void submit_日勤に職能がなければ夕勤の行だけ作る() {
+        when(periodService.getPeriod(1L)).thenReturn(period);
+        when(periodService.isAcceptingRequests(period)).thenReturn(true);
+        Slot day = slot(1, "日勤", LocalTime.of(8, 0), LocalTime.of(17, 0), skill(2));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user(skill(1))));
+        when(slotRepository.findAllWithRequiredSkills()).thenReturn(List.of(day, eveningSlot));
+        when(requestSubmissionRepository.findById(new RequestSubmissionId(1L, USER_ID)))
+                .thenReturn(Optional.empty());
+        when(slotRepository.getReferenceById((byte) 2)).thenReturn(eveningSlot);
+        List<DayRequestForm> days = allOk();
+        days.forEach(d -> d.setDayShift(null));
+
+        service.submit(USER_ID, form(days));
+
+        assertThat(savedRows()).hasSize(3).allMatch(r -> r.getSlot().getId() == 2);
     }
 
     @Test
