@@ -432,6 +432,61 @@ body {
 /* ===== SB-03 シフト希望提出（栗原） ===== */
 
 /* ===== SB-04 みんなのシフト（新井） ===== */
+/* PC・タブレットの表（行＝スタッフ、列＝日付。横にスクロールする） */
+.all-shifts-table {
+    border-collapse: collapse;
+    background-color: #FFFFFF;
+    font-size: 0.85rem;
+}
+
+.all-shifts-table th,
+.all-shifts-table td {
+    min-width: 64px;
+    padding: 4px;
+    text-align: center;
+    vertical-align: top;
+    border: 1px solid var(--color-border);
+}
+
+.all-shifts-table thead th {
+    font-weight: normal;
+    background-color: var(--color-bg);
+}
+
+.all-shifts-table td .shift-badge {
+    display: block;
+    margin-bottom: 2px;
+}
+
+/* 氏名の列は左に固定する */
+.all-shifts-table .all-shifts-name {
+    position: sticky;
+    left: 0;
+    min-width: 120px;
+    text-align: left;
+    white-space: nowrap;
+    background-color: #FFFFFF;
+}
+
+.all-shifts-table thead .all-shifts-name {
+    background-color: var(--color-bg);
+}
+
+/* 自分の行は薄い緑 */
+.all-shifts-table .all-shifts-mine td,
+.all-shifts-table .all-shifts-mine .all-shifts-name {
+    background-color: #E6F3EC;
+}
+
+.all-shifts-table .is-sat,
+.all-shifts-day .is-sat {
+    color: #0D6EFD;
+}
+
+.all-shifts-table .is-sun,
+.all-shifts-day .is-sun {
+    color: var(--color-absent);
+}
 
 /* ===== SB-05 設定（新井） ===== */
 
