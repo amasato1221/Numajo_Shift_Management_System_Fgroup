@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import jp.numajo.fgroup.shift.constant.NotificationType;
 import jp.numajo.fgroup.shift.constant.Role;
+import jp.numajo.fgroup.shift.dto.NoticeRow;
 import jp.numajo.fgroup.shift.entity.Notification;
 import jp.numajo.fgroup.shift.entity.ShiftAssignment;
 import jp.numajo.fgroup.shift.entity.ShiftPeriod;
@@ -39,6 +40,10 @@ public class NotificationService {
     static final int BODY_MAX = 500;
     /** チャットのお知らせの本文に入れる文字数 */
     static final int CHAT_BODY_LENGTH = 50;
+    /** 一覧に出す本文の最大文字数（20-SC-02 2.1） */
+    static final int ROW_BODY_MAX = 100;
+    /** 一覧の本文を切ったときに付ける印（20-SC-02 1章 No.2-4） */
+    static final String ELLIPSIS = "…";
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
@@ -47,6 +52,28 @@ public class NotificationService {
     /** 自分の未読のお知らせ数（ヘッダー）。 */
     public long countUnread(Long userId) {
         return notificationRepository.countByUserIdAndReadAtIsNull(userId);
+    }
+
+    /**
+     * 未読のお知らせを新しい順に3件（20-SB-01 2.1-3）。
+     *
+     * @param userId ユーザーID
+     * @return 一覧の行（0〜3件）
+     */
+    public List<NoticeRow> findUnreadTop3(Long userId) {
+        return notificationRepository.findTop3ByUserIdAndReadAtIsNullOrderByCreatedAtDescIdDesc(userId).stream()
+                .map(NotificationService::toRow)
+                .toList();
+    }
+
+    /** お知らせを一覧の1行にする（20-SC-02 2.1-2）。本文は100文字を超えたら切って「…」を付ける。 */
+    static NoticeRow toRow(Notification n) {
+        String body = n.getBody();
+        if (body != null && body.length() > ROW_BODY_MAX) {
+            body = body.substring(0, ROW_BODY_MAX) + ELLIPSIS;
+        }
+        return new NoticeRow(n.getId(), n.getType(), n.getType().getLabel(), n.getTitle(), body,
+                n.getCreatedAt(), n.getReadAt() == null);
     }
 
     /** シフトの公開を、有効なバイト全員に知らせる（PUBLISHED。20-SM-06 3.6）。 */
