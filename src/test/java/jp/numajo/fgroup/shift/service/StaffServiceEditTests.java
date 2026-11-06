@@ -13,6 +13,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -198,6 +199,46 @@ class StaffServiceEditTests {
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
         assertThat(captor.getValue().getSkills()).isEmpty();
+    }
+
+    @Test
+    void create_職能のIDがnullなら職能なしとして登録する() {
+        when(userRepository.existsByLoginId("yamada")).thenReturn(false);
+        when(passwordGenerator.generate()).thenReturn("Abcdef2345");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(7L);
+            return saved;
+        });
+        StaffForm form = form("yamada");
+        form.setSkillIds(null);
+
+        service.create(form, OPERATOR_ID);
+
+        verify(skillRepository, never()).findAllById(any());
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertThat(captor.getValue().getSkills()).isEmpty();
+    }
+
+    @Test
+    void create_職能のIDのnullと重複は除いて調べる() {
+        when(userRepository.existsByLoginId("yamada")).thenReturn(false);
+        when(skillRepository.findAllById(any())).thenReturn(List.of(skill(10L, "レジ")));
+        when(passwordGenerator.generate()).thenReturn("Abcdef2345");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(7L);
+            return saved;
+        });
+        StaffForm form = form("yamada");
+        form.setSkillIds(Arrays.asList(10L, null, 10L));
+
+        service.create(form, OPERATOR_ID);
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertThat(captor.getValue().getSkills()).extracting(Skill::getId).containsExactly(10L);
     }
 
     @Test
