@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='settings'">
+<head>
+    <title>店舗設定</title>
+</head>
+<body>
+    <main layout:fragment="content">
+        <h1 class="h4 mb-4">店舗設定</h1>
+        <form th:action="@{/manager/settings}" th:object="${storeSettingForm}" method="post">
+            <div class="mb-3">
+                <label for="storeName" class="form-label fw-bold">店舗名</label>
+                <input type="text" id="storeName" th:field="*{storeName}" class="form-control">
+                <div class="text-danger small" th:if="${#fields.hasErrors('storeName')}"
+                     th:errors="*{storeName}"></div>
+            </div>
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                    <input type="checkbox" id="showOthersShifts" th:field="*{showOthersShifts}"
+                           class="form-check-input" role="switch">
+                    <label for="showOthersShifts" class="form-check-label fw-bold">ほかの人のシフトを表示する</label>
+                </div>
+                <div class="form-text">OFF にすると、バイトは自分のシフトだけ見られます。</div>
+            </div>
+            <button type="submit" class="btn btn-success">保存</button>
+            <div class="text-muted small mt-3"
+                 th:text="|最終更新 ${#temporals.format(setting.updatedAt, 'yyyy/MM/dd HH:mm')}|"></div>
+        </form>
+    </main>
+</body>
+</html>
