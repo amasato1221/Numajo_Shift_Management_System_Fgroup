@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-07 |
-| 版 | 第1.3版（令和8年11月9日） |
+| 版 | 第1.4版（令和8年11月9日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -14,6 +14,7 @@
 | 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：RequestPageView に submissionState・statusLabel を追加（H2） | 新井 |
 | 1.2 | 令和8年11月2日 | 実装中の質問（栗原）を反映：DayRequestForm#workDate に ISO 形式の指定を追加。RequestDayRow に dateLabel、RequestPageView に deadlineLabel・submittedAtLabel、StaffDetailView に updatedAtLabel・lockedUntilLabel を追加。StaffRowView の skillNames を職能名の順にした | 新井 |
 | 1.3 | 令和8年11月9日 | 日付の表示の統一（10_基本設計書 5.3 第1.4版）：3章の「テンプレートで `#temporals.format` を使ってよい」を削除し、日付型の項目には表示用の `〜Label` を必ず並べる決まりにした。4章の dto に `〜Label` を追加し、日付の列を表す `DayColumn` を新しく作った（`ShiftTable`・`AssignmentMatrix` の `days`） | 新井 |
+| 1.4 | 令和8年11月9日 | SelectOption を時刻プルダウンにも使うことを書いた（`ShiftTimeUtil#timeSelectOptions()`） | 新井 |
 
 ## 1. form の決まり
 
@@ -86,7 +87,7 @@ public class SkillForm {
 
 | record | 項目（順番どおり） | 作る Service |
 | --- | --- | --- |
-| `SelectOption` | `String value, String label` | 各 Service（プルダウン） |
+| `SelectOption` | `String value, String label` | 各 Service（プルダウン）、`ShiftTimeUtil#timeSelectOptions()`（時刻） |
 | `PeriodOption` | `Long id, LocalDate startDate, LocalDate endDate, String periodLabel, LocalDateTime deadlineAt, String deadlineLabel, String deadlineShortLabel, PeriodStatus status, String label`（`periodLabel`＝募集期間、`deadlineLabel`＝日時、`deadlineShortLabel`＝日時（短い）。`label` はプルダウンの表示名で、30-05 の PeriodService のとおり） | `PeriodService#toOption` |
 | `NoticeRow` | `Long id, NotificationType type, String typeLabel, String title, String body, LocalDateTime createdAt, String createdAtLabel, boolean unread`（`createdAtLabel`＝日時） | `NotificationService` |
 | `ShiftBadge` | `BadgeType type, String icons, String timeText, LocalTime startTime, LocalTime endTime` | `ShiftCalendarService` |
