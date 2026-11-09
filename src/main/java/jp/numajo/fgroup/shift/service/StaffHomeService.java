@@ -19,6 +19,7 @@ import jp.numajo.fgroup.shift.entity.ShiftAssignment;
 import jp.numajo.fgroup.shift.repository.ShiftAssignmentRepository;
 import jp.numajo.fgroup.shift.repository.ShiftPeriodRepository;
 import jp.numajo.fgroup.shift.repository.SlotRepository;
+import jp.numajo.fgroup.shift.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -67,8 +68,8 @@ public class StaffHomeService {
             return null;
         }
         ShiftAssignment a = next.get(0);
-        return new NextShiftView(a.getWorkDate(),
+        return new NextShiftView(a.getWorkDate(), DateTimeUtil.monthDay(a.getWorkDate()),
                 ShiftCalendarService.toBadge(a, slotRepository.findAll(Sort.by("id"))),
-                a.getStartTime(), a.getEndTime());
+                a.getStartTime(), a.getEndTime(), DateTimeUtil.timeRange(a.getStartTime(), a.getEndTime()));
     }
 }

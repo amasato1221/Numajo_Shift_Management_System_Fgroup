@@ -10,7 +10,7 @@
     <!--
       SB-04 みんなのシフト（20-SB-04）。
       PC・タブレットはスタッフ×日付の表、スマホ（767px以下）は1日1枚のカード。
-      日付・曜日の文字列は ShiftTable（DateTimeUtil）で作る（91 の日付の表示）。土日の色は dayOfWeek（土＝6、日＝7）で付ける。
+      日付・曜日の文字列は table.days の DayColumn の〜Label を出す（91 5.1）。土日の色は col.date の dayOfWeek（土＝6、日＝7）で付ける。
     -->
     <div layout:fragment="content">
         <h1 class="h4 mb-4">みんなのシフト</h1>
@@ -36,11 +36,10 @@
                             <thead>
                                 <tr>
                                     <th class="all-shifts-name">氏名</th>
-                                    <th th:each="day : ${table.days}"
-                                        th:classappend="${day.dayOfWeek.value == 6} ? 'is-sat' : (${day.dayOfWeek.value == 7} ? 'is-sun' : '')">
-                                        <span class="d-block" th:text="${table.dateLabel(day)}">11/1</span>
-                                        <span class="d-block"
-                                              th:text="${table.dayOfWeekLabel(day)}">日</span>
+                                    <th th:each="col : ${table.days}"
+                                        th:classappend="${col.date.dayOfWeek.value == 6} ? 'is-sat' : (${col.date.dayOfWeek.value == 7} ? 'is-sun' : '')">
+                                        <span class="d-block" th:text="${col.dateLabel}">11/1</span>
+                                        <span class="d-block" th:text="${col.dayOfWeekLabel}">日</span>
                                     </th>
                                 </tr>
                             </thead>
@@ -48,8 +47,8 @@
                                 <tr th:each="row : ${table.rows}"
                                     th:classappend="${row.userId == myUserId} ? 'all-shifts-mine'">
                                     <th class="all-shifts-name" scope="row" th:text="${row.name}">山田 花子</th>
-                                    <td th:each="day : ${table.days}">
-                                        <th:block th:each="b : ${row.cells.get(day)}">
+                                    <td th:each="col : ${table.days}">
+                                        <th:block th:each="b : ${row.cells.get(col.date)}">
                                             <span th:replace="~{fragments/shift-badge :: badge(${b})}"></span>
                                         </th:block>
                                     </td>
@@ -62,13 +61,13 @@
 
             <!-- スマホ：1日1枚のカード -->
             <div class="d-md-none">
-                <div class="card mb-2 all-shifts-day" th:each="day : ${table.days}"
-                     th:with="dayNames=${table.namesOn(day, 'DAY')},
-                              eveningNames=${table.namesOn(day, 'EVENING')},
-                              timeNames=${table.namesOn(day, 'TIME')}">
+                <div class="card mb-2 all-shifts-day" th:each="col : ${table.days}"
+                     th:with="dayNames=${table.namesOn(col.date, 'DAY')},
+                              eveningNames=${table.namesOn(col.date, 'EVENING')},
+                              timeNames=${table.namesOn(col.date, 'TIME')}">
                     <div class="card-header fw-bold"
-                         th:classappend="${day.dayOfWeek.value == 6} ? 'is-sat' : (${day.dayOfWeek.value == 7} ? 'is-sun' : '')"
-                         th:text="${table.cardLabel(day)}">11/1(日)</div>
+                         th:classappend="${col.date.dayOfWeek.value == 6} ? 'is-sat' : (${col.date.dayOfWeek.value == 7} ? 'is-sun' : '')"
+                         th:text="${col.dateWithDayLabel}">11/1(日)</div>
                     <div class="card-body py-2">
                         <div th:if="${!dayNames.isEmpty()}"
                              th:text="'☀日勤：' + ${#strings.listJoin(dayNames, '、')}">☀日勤：山田、佐藤</div>

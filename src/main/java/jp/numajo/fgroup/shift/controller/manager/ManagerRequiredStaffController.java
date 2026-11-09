@@ -30,6 +30,7 @@ import jp.numajo.fgroup.shift.form.RequiredDefaultForm;
 import jp.numajo.fgroup.shift.form.RequiredOverrideForm;
 import jp.numajo.fgroup.shift.security.LoginUser;
 import jp.numajo.fgroup.shift.service.RequiredStaffService;
+import jp.numajo.fgroup.shift.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -119,6 +120,7 @@ public class ManagerRequiredStaffController {
         model.addAttribute("requiredOverrideForm", overrideForm);
         model.addAttribute("days", requiredStaffService.getMonth(month));
         model.addAttribute("ym", month);
+        model.addAttribute("ymLabel", DateTimeUtil.yearMonth(month));
         model.addAttribute("prevYm", month.minusMonths(1));
         model.addAttribute("nextYm", month.plusMonths(1));
     }

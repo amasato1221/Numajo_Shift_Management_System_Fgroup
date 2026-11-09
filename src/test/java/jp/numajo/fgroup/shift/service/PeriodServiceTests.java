@@ -181,6 +181,10 @@ class PeriodServiceTests {
         assertThat(actual.endDate()).isEqualTo(date("2026-11-15"));
         assertThat(actual.deadlineAt()).isEqualTo(LocalDateTime.parse("2026-10-15T23:59:59"));
         assertThat(actual.status()).isEqualTo(PeriodStatus.OPEN);
+        // 〜Label（30-07 3章）：募集期間・日時・日時（短い）
+        assertThat(actual.periodLabel()).isEqualTo("11/1〜11/15");
+        assertThat(actual.deadlineLabel()).isEqualTo("2026/10/15 23:59");
+        assertThat(actual.deadlineShortLabel()).isEqualTo("10/15 23:59");
     }
 
     // ---------- resolveDefault ----------

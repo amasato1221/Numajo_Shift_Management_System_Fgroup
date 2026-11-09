@@ -23,6 +23,7 @@ import jp.numajo.fgroup.shift.repository.UserRepository;
  * 判定条件網羅：
  * - findUnreadTop3：取れた件数（0件／2件。2件は並びを変えずに行にする）
  * - toRow：未読か（read_at が null → unread 真／日時あり → 偽）
+ * - toRow：作った日時があるか（created_at あり → createdAtLabel に日時／null → null）
  *
  * 組み合わせ表：toRow の本文を切るか
  * 判定：A body != null &amp;&amp; B 長さが100文字を超える
@@ -77,6 +78,7 @@ class NotificationServiceNoticeRowTests {
         assertThat(first.title()).isEqualTo("件名2");
         assertThat(first.body()).isEqualTo("本文2");
         assertThat(first.createdAt()).isEqualTo(LocalDateTime.of(2026, 10, 16, 9, 2));
+        assertThat(first.createdAtLabel()).isEqualTo("2026/10/16 09:02");
         assertThat(first.unread()).isTrue();
     }
 
@@ -88,6 +90,14 @@ class NotificationServiceNoticeRowTests {
                 notification(1L, NotificationType.DEADLINE, "本文", LocalDateTime.of(2026, 10, 17, 8, 0)));
 
         assertThat(actual.unread()).isFalse();
+    }
+
+    @Test
+    void toRow_作った日時がnull_表示もnull() {
+        Notification n = notification(1L, NotificationType.CHAT, "本文", null);
+        n.setCreatedAt(null);
+
+        assertThat(NotificationService.toRow(n).createdAtLabel()).isNull();
     }
 
     @Test
