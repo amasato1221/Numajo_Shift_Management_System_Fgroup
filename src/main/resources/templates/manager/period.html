@@ -10,7 +10,7 @@
 <!--
   SM-06 シフト作成（希望一覧・割当・公開）（20-SM-06）。
   割当表のセルは、表全体を囲む1つのフォームのボタン（name="cell"、値は「ユーザーID:日付:枠ID」）。
-  日付の値は、画面の表示の形に左右されないよう、#temporals.format で yyyy-MM-dd にして送る。
+  日付・時刻の文字は〜Label をそのまま出す（91 5.1）。送る値（セルのボタン・hidden・プルダウン）は日付型・時刻型をそのまま書く。
 -->
 <div layout:fragment="content">
     <h1 class="h4 mb-3">シフト作成</h1>
@@ -26,9 +26,9 @@
               th:classappend="${page.period.status.name() == 'OPEN'} ? 'text-bg-info'
                   : (${page.period.status.name() == 'CLOSED'} ? 'text-bg-warning' : 'text-bg-success')">作成中</span>
         <span class="text-muted small"
-              th:text="|提出期限 ${#temporals.format(page.period.deadlineAt, 'yyyy/MM/dd HH:mm')}|">提出期限 2026/10/15 23:59</span>
-        <span class="text-muted small" th:if="${page.publishedAt != null}"
-              th:text="|公開日時 ${#temporals.format(page.publishedAt, 'yyyy/MM/dd HH:mm')}|">公開日時 2026/10/20 18:30</span>
+              th:text="|提出期限 ${page.period.deadlineLabel}|">提出期限 2026/10/15 23:59</span>
+        <span class="text-muted small" th:if="${page.publishedAtLabel != null}"
+              th:text="|公開日時 ${page.publishedAtLabel}|">公開日時 2026/10/20 18:30</span>
 
         <div class="ms-auto d-flex align-items-center gap-2">
             <a class="btn btn-outline-secondary" target="_blank" rel="noopener"
@@ -56,14 +56,14 @@
                 <thead>
                 <tr>
                     <th rowspan="2" class="assign-name">スタッフ</th>
-                    <th th:each="day : ${page.matrix.days}" th:colspan="${#lists.size(page.matrix.slots)}"
-                        th:classappend="${day.dayOfWeek.value == 6} ? 'is-sat' : (${day.dayOfWeek.value == 7} ? 'is-sun' : '')">
-                        <span th:text="${page.matrix.dateLabel(day)}">11/1</span>
-                        <span th:text="|(${page.matrix.dayOfWeekLabel(day)})|">(日)</span>
+                    <th th:each="col : ${page.matrix.days}" th:colspan="${#lists.size(page.matrix.slots)}"
+                        th:classappend="${col.date.dayOfWeek.value == 6} ? 'is-sat' : (${col.date.dayOfWeek.value == 7} ? 'is-sun' : '')">
+                        <span th:text="${col.dateLabel}">11/1</span>
+                        <span th:text="${col.dayOfWeekLabel}">日</span>
                     </th>
                 </tr>
                 <tr>
-                    <th:block th:each="day : ${page.matrix.days}">
+                    <th:block th:each="col : ${page.matrix.days}">
                         <th th:each="slot : ${page.matrix.slots}" class="assign-slot"
                             th:text="${slot.id == 1} ? '☀' : '☾'" th:title="${slot.name}">☀</th>
                     </th:block>
@@ -78,12 +78,12 @@
                         <a class="d-block small" th:if="${page.period.status.name() != 'PUBLISHED'}"
                            th:href="@{/manager/periods/{id}/requests/{userId}(id=${page.period.id},userId=${row.userId})}">希望を直す</a>
                     </th>
-                    <th:block th:each="day : ${page.matrix.days}">
+                    <th:block th:each="col : ${page.matrix.days}">
                         <td th:each="slot : ${page.matrix.slots}" class="assign-cell"
-                            th:with="cell=${row.cells.get(day).get(slot.id)}"
+                            th:with="cell=${row.cells.get(col.date).get(slot.id)}"
                             th:classappend="${cell.assign.name() == 'SLOT' or cell.assign.name() == 'TIME'} ? 'is-assigned'">
                             <button type="submit" name="cell" class="assign-cell-btn"
-                                    th:value="|${row.userId}:${#temporals.format(day, 'yyyy-MM-dd')}:${slot.id}|"
+                                    th:value="|${row.userId}:${col.date}:${slot.id}|"
                                     th:disabled="${!page.editable or cell.disabled}"
                                     th:attr="data-confirm=${cell.confirmCode != null} ? #{${cell.confirmCode}} : null">
                                 <span class="assign-request" th:title="${cell.requestTitle}"
@@ -110,9 +110,9 @@
                 <tfoot>
                 <tr>
                     <th scope="row" class="assign-name">割当／必要</th>
-                    <th:block th:each="day : ${page.matrix.days}">
+                    <th:block th:each="col : ${page.matrix.days}">
                         <td th:each="slot : ${page.matrix.slots}" class="assign-count"
-                            th:with="count=${page.matrix.counts.get(day).get(slot.id)}"
+                            th:with="count=${page.matrix.counts.get(col.date).get(slot.id)}"
                             th:classappend="(${count.shortage} ? 'is-shortage' : 'is-enough') + (${count.traineeOnly} ? ' is-trainee-only' : '')"
                             th:text="|${count.assigned}/${count.required}|">2/2</td>
                     </th:block>
@@ -141,7 +141,7 @@
                 <td th:case="'SHORTAGE'"><span class="badge text-bg-danger">人数不足</span></td>
                 <td th:case="'SKILL'"><span class="badge badge-skill">職能不足</span></td>
                 <td th:case="*"><span class="badge text-bg-secondary">無効なスタッフ</span></td>
-                <td th:text="${w.args[0]}">11月1日(日)</td>
+                <td th:text="${w.workDateLabel}">11月1日(日)</td>
                 <td th:text="${w.args[1]}">日勤</td>
                 <td th:text="${#messages.msgWithParams(w.messageCode, w.args)}">…</td>
             </tr>
@@ -151,7 +151,7 @@
 
     <!-- 時間指定の希望 -->
     <h2 class="h5">時間指定の希望</h2>
-    <p class="text-muted" th:if="${#lists.isEmpty(page.timeRequests)}">時間指定の希望はありません。</p>
+    <p class="text-muted" th:if="${#lists.isEmpty(page.timeRequests)}" th:text="#{I2611}">時間指定の希望はありません。</p>
     <div class="table-responsive mb-4" th:unless="${#lists.isEmpty(page.timeRequests)}">
         <table class="table table-sm align-middle">
             <thead>
@@ -165,16 +165,16 @@
             <tbody>
             <tr th:each="r : ${page.timeRequests}">
                 <td th:text="${r.name}">山田 太郎</td>
-                <td th:text="${#temporals.format(r.workDate, 'M/d')}">11/1</td>
-                <td th:text="|${#temporals.format(r.startTime, 'H:mm')}〜${#temporals.format(r.endTime, 'H:mm')}|">13:00〜22:00</td>
+                <td th:text="${r.workDateLabel}">11月1日(日)</td>
+                <td th:text="${r.timeLabel}">13:00〜22:00</td>
                 <td>
                     <span th:if="${r.assigned}">割当済み</span>
                     <form th:if="${!r.assigned and page.editable}" method="post"
                           th:action="@{/manager/periods/{id}/assignments/time(id=${page.period.id})}">
                         <input type="hidden" name="userId" th:value="${r.userId}">
-                        <input type="hidden" name="workDate" th:value="${#temporals.format(r.workDate, 'yyyy-MM-dd')}">
-                        <input type="hidden" name="startTime" th:value="${#temporals.format(r.startTime, 'HH:mm')}">
-                        <input type="hidden" name="endTime" th:value="${#temporals.format(r.endTime, 'HH:mm')}">
+                        <input type="hidden" name="workDate" th:value="${r.workDate}">
+                        <input type="hidden" name="startTime" th:value="${r.startTime}">
+                        <input type="hidden" name="endTime" th:value="${r.endTime}">
                         <button type="submit" class="btn btn-sm btn-outline-primary">この時間で割り当てる</button>
                     </form>
                 </td>
@@ -199,24 +199,24 @@
                 <label for="timeWorkDate" class="form-label">日付</label>
                 <select id="timeWorkDate" name="workDate" class="form-select">
                     <option value="">選んでください</option>
-                    <option th:each="d : ${page.matrix.days}" th:value="${#temporals.format(d, 'yyyy-MM-dd')}"
-                            th:text="|${page.matrix.dateLabel(d)}(${page.matrix.dayOfWeekLabel(d)})|">11/1(日)</option>
+                    <option th:each="col : ${page.matrix.days}" th:value="${col.date}"
+                            th:text="${col.dateWithDayLabel}">11/1(日)</option>
                 </select>
             </div>
             <div class="col-6 col-md-2">
                 <label for="timeStart" class="form-label">開始</label>
                 <select id="timeStart" name="startTime" class="form-select">
                     <option value="">選んでください</option>
-                    <option th:each="t : ${timeOptions}" th:value="${#temporals.format(t, 'HH:mm')}"
-                            th:text="${#temporals.format(t, 'H:mm')}">8:00</option>
+                    <option th:each="o : ${timeOptions}" th:value="${o.value}"
+                            th:text="${o.label}">8:00</option>
                 </select>
             </div>
             <div class="col-6 col-md-2">
                 <label for="timeEnd" class="form-label">終了</label>
                 <select id="timeEnd" name="endTime" class="form-select">
                     <option value="">選んでください</option>
-                    <option th:each="t : ${timeOptions}" th:value="${#temporals.format(t, 'HH:mm')}"
-                            th:text="${#temporals.format(t, 'H:mm')}">8:00</option>
+                    <option th:each="o : ${timeOptions}" th:value="${o.value}"
+                            th:text="${o.label}">8:00</option>
                 </select>
             </div>
             <div class="col-12 col-md-2 d-flex align-items-end">
@@ -227,7 +227,7 @@
 
     <!-- 時間指定の割当 -->
     <h2 class="h5">時間指定の割当</h2>
-    <p class="text-muted" th:if="${#lists.isEmpty(page.timeAssignments)}">時間指定の割当はありません。</p>
+    <p class="text-muted" th:if="${#lists.isEmpty(page.timeAssignments)}" th:text="#{I2612}">時間指定の割当はありません。</p>
     <div class="table-responsive mb-4" th:unless="${#lists.isEmpty(page.timeAssignments)}">
         <table class="table table-sm align-middle">
             <thead>
@@ -242,8 +242,8 @@
             <tbody>
             <tr th:each="a : ${page.timeAssignments}">
                 <td th:text="${a.name}">山田 太郎</td>
-                <td th:text="${#temporals.format(a.workDate, 'M/d')}">11/1</td>
-                <td th:text="|${#temporals.format(a.startTime, 'H:mm')}〜${#temporals.format(a.endTime, 'H:mm')}|">13:00〜22:00</td>
+                <td th:text="${a.workDateLabel}">11月1日(日)</td>
+                <td th:text="${a.timeLabel}">13:00〜22:00</td>
                 <td>
                     <span th:if="${a.status.name() == 'ASSIGNED'}">出勤</span>
                     <span class="text-danger" th:unless="${a.status.name() == 'ASSIGNED'}">欠勤</span>

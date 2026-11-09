@@ -8,6 +8,7 @@ import java.util.List;
  *
  * @param period              表示中の期間
  * @param publishedAt         公開日時（公開済みでなければ null）
+ * @param publishedAtLabel    公開日時の表示（例：2026/10/20 18:30。公開済みでなければ null）
  * @param periodOptions       期間のプルダウンの選択肢
  * @param matrix              割当表
  * @param warnings            警告
@@ -17,7 +18,8 @@ import java.util.List;
  * @param publishable         公開できるか
  * @param notPublishableCode  公開できない理由のメッセージコード（W2604・W2605。公開できる・公開済みなら null）
  */
-public record PeriodPageView(PeriodOption period, LocalDateTime publishedAt, List<PeriodOption> periodOptions,
+public record PeriodPageView(PeriodOption period, LocalDateTime publishedAt, String publishedAtLabel,
+        List<PeriodOption> periodOptions,
         AssignmentMatrix matrix, List<ShiftWarning> warnings, List<TimeRequestRow> timeRequests,
         List<TimeAssignmentRow> timeAssignments, boolean editable, boolean publishable,
         String notPublishableCode) {

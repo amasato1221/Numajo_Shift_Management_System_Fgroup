@@ -27,6 +27,7 @@ import jp.numajo.fgroup.shift.constant.Role;
 import jp.numajo.fgroup.shift.constant.WarningType;
 import jp.numajo.fgroup.shift.dto.AssignmentMatrix;
 import jp.numajo.fgroup.shift.dto.CountCell;
+import jp.numajo.fgroup.shift.dto.DayColumn;
 import jp.numajo.fgroup.shift.dto.MatrixCell;
 import jp.numajo.fgroup.shift.dto.MatrixCell.AssignMark;
 import jp.numajo.fgroup.shift.dto.MatrixCell.RequestMark;
@@ -111,6 +112,7 @@ public class AssignmentService {
         boolean traineeOnly = warnings.stream().anyMatch(w -> w.type() == WarningType.TRAINEE_ONLY);
         AssignmentMatrix matrix = buildMatrix(period, staff, requests, submittedIds, assignments, slots, required);
         return new PeriodPageView(PeriodService.toOption(period), period.getPublishedAt(),
+                period.getPublishedAt() == null ? null : DateTimeUtil.dateTime(period.getPublishedAt()),
                 periodService.findOptionsForManager(), matrix, warnings, findTimeRequests(requests, assignments),
                 findTimeAssignments(assignments), status != PeriodStatus.OPEN,
                 status == PeriodStatus.CLOSED && !traineeOnly, notPublishableCode(status, traineeOnly));
@@ -339,7 +341,8 @@ public class AssignmentService {
     private AssignmentMatrix buildMatrix(ShiftPeriod period, List<User> staff, List<ShiftRequest> requests,
             Set<Long> submittedIds, List<ShiftAssignment> assignments, List<Slot> slots,
             Map<LocalDate, Map<Byte, Integer>> required) {
-        List<LocalDate> days = period.getStartDate().datesUntil(period.getEndDate().plusDays(1)).toList();
+        List<LocalDate> dates = period.getStartDate().datesUntil(period.getEndDate().plusDays(1)).toList();
+        List<DayColumn> days = dates.stream().map(ShiftTableService::toDayColumn).toList();
         Map<Long, List<ShiftRequest>> requestsByUser = requests.stream()
                 .collect(Collectors.groupingBy(r -> r.getUser().getId()));
         Map<Long, List<ShiftAssignment>> assignmentsByUser = assignments.stream()
@@ -351,7 +354,7 @@ public class AssignmentService {
             List<ShiftAssignment> userAssignments = assignmentsByUser.getOrDefault(user.getId(), List.of());
             boolean submitted = submittedIds.contains(user.getId());
             Map<LocalDate, Map<Byte, MatrixCell>> cells = new LinkedHashMap<>();
-            for (LocalDate day : days) {
+            for (LocalDate day : dates) {
                 Map<Byte, MatrixCell> cellsOfDay = new LinkedHashMap<>();
                 for (Slot slot : slots) {
                     cellsOfDay.put(slot.getId(),
@@ -361,7 +364,7 @@ public class AssignmentService {
             }
             rows.add(new MatrixRow(user.getId(), user.getName(), user.isTrainee(), submitted, cells));
         }
-        return new AssignmentMatrix(days, slots, rows, buildCounts(days, slots, assignments, required));
+        return new AssignmentMatrix(days, slots, rows, buildCounts(dates, slots, assignments, required));
     }
 
     /** 最下行の「割当数/必要数」。数えるのは出勤だけ。 */
@@ -425,7 +428,7 @@ public class AssignmentService {
         return null;
     }
 
-    /** 希望の記号。職能がなければ －、未提出なら ・、枠の希望があれば ○×、時間指定が重なれば 時。 */
+    /** 希望の記号。職能がなければ －、未提出なら ・、枠の希望があれば ○×、時間指定が重なれば 時。提出済みで枠の希望も重なる時間指定もなければ ×。 */
     private static RequestInfo requestInfo(boolean hasSkill, boolean submitted, LocalDate day, Slot slot,
             List<ShiftRequest> requests) {
         if (!hasSkill) {
@@ -450,7 +453,7 @@ public class AssignmentService {
         return timeRequest
                 .map(r -> new RequestInfo(RequestMark.TIME, DateTimeUtil.time(r.getStartTime()) + "-"
                         + DateTimeUtil.time(r.getEndTime())))
-                .orElseGet(() -> new RequestInfo(RequestMark.NOT_SUBMITTED, null));
+                .orElseGet(() -> new RequestInfo(RequestMark.NG, null));
     }
 
     /** 時間指定の希望の一覧（日付・ふりがな順）。同じ時間の出勤の割当があれば「割当済み」。 */
@@ -464,7 +467,8 @@ public class AssignmentService {
                 .sorted(Comparator.comparing(ShiftRequest::getWorkDate)
                         .thenComparing(ShiftRequest::getUser, ShiftWarningService.BY_KANA))
                 .map(r -> new TimeRequestRow(r.getUser().getId(), r.getUser().getName(), r.getWorkDate(),
-                        r.getStartTime(), r.getEndTime(), assigned.contains(new TimeKey(r.getUser().getId(),
+                        DateTimeUtil.monthDay(r.getWorkDate()), r.getStartTime(), r.getEndTime(),
+                        DateTimeUtil.timeRange(r.getStartTime(), r.getEndTime()), assigned.contains(new TimeKey(r.getUser().getId(),
                                 r.getWorkDate(), r.getStartTime(), r.getEndTime()))))
                 .toList();
     }
@@ -477,7 +481,8 @@ public class AssignmentService {
                         .thenComparing(ShiftAssignment::getStartTime)
                         .thenComparing(ShiftAssignment::getUser, ShiftWarningService.BY_KANA))
                 .map(a -> new TimeAssignmentRow(a.getId(), a.getUser().getName(), a.getWorkDate(),
-                        a.getStartTime(), a.getEndTime(), a.getStatus()))
+                        DateTimeUtil.monthDay(a.getWorkDate()), a.getStartTime(), a.getEndTime(),
+                        DateTimeUtil.timeRange(a.getStartTime(), a.getEndTime()), a.getStatus()))
                 .toList();
     }
 }

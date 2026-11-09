@@ -42,6 +42,7 @@ import jp.numajo.fgroup.shift.constant.Role;
 import jp.numajo.fgroup.shift.constant.WarningType;
 import jp.numajo.fgroup.shift.dto.AssignmentMatrix;
 import jp.numajo.fgroup.shift.dto.CountCell;
+import jp.numajo.fgroup.shift.dto.DayColumn;
 import jp.numajo.fgroup.shift.dto.MatrixCell;
 import jp.numajo.fgroup.shift.dto.MatrixCell.AssignMark;
 import jp.numajo.fgroup.shift.dto.MatrixCell.RequestMark;
@@ -125,6 +126,15 @@ class ManagerPeriodControllerMvcTests {
 
     /** あらゆる印（希望・割当・警告・時間指定）を1画面に並べたページ。 */
     private PeriodPageView fullPage(PeriodStatus status, boolean editable, boolean publishable) {
+        return page(status, editable, publishable,
+                List.of(new TimeRequestRow(12L, "鈴木", D1, "11月1日(日)", LocalTime.of(13, 0), LocalTime.of(22, 0),
+                        "13:00〜22:00", true)),
+                List.of(new TimeAssignmentRow(102L, "鈴木", D1, "11月1日(日)", LocalTime.of(13, 0),
+                        LocalTime.of(22, 0), "13:00〜22:00", AssignmentStatus.ASSIGNED)));
+    }
+
+    private PeriodPageView page(PeriodStatus status, boolean editable, boolean publishable,
+            List<TimeRequestRow> timeRequests, List<TimeAssignmentRow> timeAssignments) {
         Slot day = new Slot();
         day.setId((byte) 1);
         day.setName("日勤");
@@ -146,20 +156,19 @@ class ManagerPeriodControllerMvcTests {
         MatrixRow rowC = new MatrixRow(13L, "佐藤", false, true, Map.of(D1, Map.of(
                 (byte) 1, cell(RequestMark.NOT_SUBMITTED, AssignMark.NONE, null, "C2602", false),
                 (byte) 2, cell(RequestMark.OK, AssignMark.NONE, null, null, false))));
-        AssignmentMatrix matrix = new AssignmentMatrix(List.of(D1), List.of(day, evening),
+        AssignmentMatrix matrix = new AssignmentMatrix(List.of(new DayColumn(D1, "11/1", "1", "日", "11/1(日)")), List.of(day, evening),
                 List.of(rowA, rowB, rowC), Map.of(D1, Map.of(
                         (byte) 1, new CountCell(2, 1, false, false),
                         (byte) 2, new CountCell(0, 1, true, true))));
-        PeriodOption option = new PeriodOption(1L, D1, D1, LocalDateTime.of(2099, 10, 15, 23, 59, 59), status,
-                "11/1〜11/1（期限 10/15）");
+        PeriodOption option = new PeriodOption(1L, D1, D1, "11/1〜11/1", LocalDateTime.of(2099, 10, 15, 23, 59, 59),
+                "2099/10/15 23:59", "10/15 23:59", status, "11/1〜11/1（期限 10/15）");
         List<ShiftWarning> warnings = List.of(
-                new ShiftWarning(WarningType.TRAINEE_ONLY, D1, (byte) 2, "W2603", new Object[] { "11/1", "夕勤" }),
-                new ShiftWarning(WarningType.SHORTAGE, D1, (byte) 2, "W2601", new Object[] { "11/1", "夕勤", 1 }));
-        return new PeriodPageView(option, null, List.of(option), matrix, warnings,
-                List.of(new TimeRequestRow(12L, "鈴木", D1, LocalTime.of(13, 0), LocalTime.of(22, 0), true)),
-                List.of(new TimeAssignmentRow(102L, "鈴木", D1, LocalTime.of(13, 0), LocalTime.of(22, 0),
-                        AssignmentStatus.ASSIGNED)),
-                editable, publishable, publishable || !editable ? null : "W2605");
+                new ShiftWarning(WarningType.TRAINEE_ONLY, D1, "11月1日(日)", (byte) 2, "W2603",
+                        new Object[] { "11月1日(日)", "夕勤" }),
+                new ShiftWarning(WarningType.SHORTAGE, D1, "11月1日(日)", (byte) 2, "W2601",
+                        new Object[] { "11月1日(日)", "夕勤", 1 }));
+        return new PeriodPageView(option, null, null, List.of(option), matrix, warnings, timeRequests,
+                timeAssignments, editable, publishable, publishable || !editable ? null : "W2605");
     }
 
     // ---------------------------------------------------------------- 権限
@@ -175,6 +184,37 @@ class ManagerPeriodControllerMvcTests {
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(html).contains("山田").contains("鈴木").contains("日勤").contains("夕勤");
+        // 日付・時刻の文字は〜Label をそのまま出す（91 5.1）
+        assertThat(html).contains("提出期限 2099/10/15 23:59").contains("11/1(日)").contains("11月1日(日)")
+                .contains("13:00〜22:00");
+        // 送る値は日付型・時刻型をそのまま書く
+        assertThat(html).contains("value=\"2099-11-01\"").contains("value=\"11:2099-11-01:1\"");
+    }
+
+    @Test
+    void 店長なら画面が描画できる_時刻のプルダウンはSelectOptionで出す() throws Exception {
+        when(assignmentService.getPeriodPage(1L)).thenReturn(fullPage(PeriodStatus.CLOSED, true, true));
+        when(assignmentService.findStaffOptions()).thenReturn(List.of());
+
+        String html = mvc.perform(get("/manager/periods/1").with(user(manager)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 値は「08:00」、表示は「8:00」
+        assertThat(html).contains("value=\"08:00\"").contains(">8:00</option>").contains("value=\"22:00\"");
+    }
+
+    @Test
+    void 店長なら画面が描画できる_時間指定が0件ならI2611とI2612を出す() throws Exception {
+        when(assignmentService.getPeriodPage(1L))
+                .thenReturn(page(PeriodStatus.CLOSED, true, true, List.of(), List.of()));
+        when(assignmentService.findStaffOptions()).thenReturn(List.of());
+
+        String html = mvc.perform(get("/manager/periods/1").with(user(manager)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("時間指定の希望はありません。").contains("時間指定の割当はありません。");
     }
 
     @Test

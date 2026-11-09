@@ -185,6 +185,7 @@ class ShiftWarningServiceTests {
         assertThat(warning.type()).isEqualTo(WarningType.SHORTAGE);
         assertThat(warning.messageCode()).isEqualTo("W2601");
         assertThat(warning.workDate()).isEqualTo(D1);
+        assertThat(warning.workDateLabel()).isEqualTo("11月1日(日)");
         assertThat(warning.slotId()).isEqualTo(DAY);
         assertThat(warning.args()).containsExactly("11月1日(日)", "日勤", 1, 2);
     }

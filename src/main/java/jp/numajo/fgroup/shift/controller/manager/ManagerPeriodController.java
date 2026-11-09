@@ -88,7 +88,7 @@ public class ManagerPeriodController {
     public String show(@PathVariable Long id, Model model) {
         model.addAttribute("page", assignmentService.getPeriodPage(id));
         model.addAttribute("timeAssignmentForm", new TimeAssignmentForm());
-        model.addAttribute("timeOptions", ShiftTimeUtil.timeOptions());
+        model.addAttribute("timeOptions", ShiftTimeUtil.timeSelectOptions());
         model.addAttribute("staffOptions", assignmentService.findStaffOptions());
         return VIEW;
     }

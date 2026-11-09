@@ -37,6 +37,7 @@ import jp.numajo.fgroup.shift.constant.OperationAction;
 import jp.numajo.fgroup.shift.constant.PeriodStatus;
 import jp.numajo.fgroup.shift.constant.Role;
 import jp.numajo.fgroup.shift.constant.WarningType;
+import jp.numajo.fgroup.shift.dto.DayColumn;
 import jp.numajo.fgroup.shift.dto.MatrixCell;
 import jp.numajo.fgroup.shift.dto.MatrixCell.AssignMark;
 import jp.numajo.fgroup.shift.dto.MatrixCell.RequestMark;
@@ -247,7 +248,7 @@ class AssignmentServiceTests {
     }
 
     private static ShiftWarning warning(WarningType type) {
-        return new ShiftWarning(type, D1, DAY, "W2603", new Object[] { "11月1日(日)", "日勤" });
+        return new ShiftWarning(type, D1, "11月1日(日)", DAY, "W2603", new Object[] { "11月1日(日)", "日勤" });
     }
 
     // ===== getPeriodPage：作成中の割当表 =====
@@ -286,6 +287,7 @@ class AssignmentServiceTests {
         assertThat(page.publishable()).isTrue();
         assertThat(page.notPublishableCode()).isNull();
         assertThat(page.publishedAt()).isNull();
+        assertThat(page.publishedAtLabel()).isNull();
         assertThat(page.warnings()).isEmpty();
     }
 
@@ -293,13 +295,16 @@ class AssignmentServiceTests {
     void getPeriodPage_行は渡したスタッフの順で列は日付と枠のID順() {
         PeriodPageView page = scenarioPage();
 
-        assertThat(page.matrix().days()).containsExactly(D1, D2, D3);
+        assertThat(page.matrix().days()).extracting(DayColumn::date).containsExactly(D1, D2, D3);
         assertThat(page.matrix().slots()).extracting(Slot::getId).containsExactly(DAY, EVENING);
         assertThat(page.matrix().rows()).extracting("userId").containsExactly(11L, 12L, 13L, 14L);
         assertThat(page.matrix().rows()).extracting("submitted").containsExactly(true, false, true, true);
         assertThat(page.matrix().rows()).extracting("trainee").containsExactly(false, false, true, false);
-        assertThat(page.matrix().dateLabel(D1)).isEqualTo("11/1");
-        assertThat(page.matrix().dayOfWeekLabel(D1)).isEqualTo("日");
+        // 見出しの文字は Service が作る（91 5.1）
+        DayColumn first = page.matrix().days().get(0);
+        assertThat(first.dateLabel()).isEqualTo("11/1");
+        assertThat(first.dayOfWeekLabel()).isEqualTo("日");
+        assertThat(first.dateWithDayLabel()).isEqualTo("11/1(日)");
     }
 
     @Test
@@ -343,10 +348,10 @@ class AssignmentServiceTests {
     }
 
     @Test
-    void getPeriodPage_提出済みでも希望の行がなければNOT_SUBMITTED() {
+    void getPeriodPage_提出済みで希望の行がなければNG() {
         MatrixCell cell = cell(scenarioPage(), 11L, D3, DAY);
 
-        assertThat(cell.request()).isEqualTo(RequestMark.NOT_SUBMITTED);
+        assertThat(cell.request()).isEqualTo(RequestMark.NG);
     }
 
     @Test
@@ -377,7 +382,8 @@ class AssignmentServiceTests {
         assertThat(day.requestTitle()).isEqualTo("8:00-12:00");
         assertThat(day.assign()).isEqualTo(AssignMark.NONE);
         assertThat(day.confirmCode()).isNull();
-        assertThat(evening.request()).isEqualTo(RequestMark.NOT_SUBMITTED);
+        // 提出済みで、時間指定の時間が夕勤と重ならないので ×
+        assertThat(evening.request()).isEqualTo(RequestMark.NG);
         assertThat(evening.requestTitle()).isNull();
         assertThat(evening.confirmCode()).isEqualTo("C2602");
     }
@@ -452,6 +458,8 @@ class AssignmentServiceTests {
         assertThat(page.timeRequests().get(0).userId()).isEqualTo(14L);
         assertThat(page.timeRequests().get(0).name()).isEqualTo("田中");
         assertThat(page.timeRequests().get(0).workDate()).isEqualTo(D1);
+        assertThat(page.timeRequests().get(0).workDateLabel()).isEqualTo("11月1日(日)");
+        assertThat(page.timeRequests().get(0).timeLabel()).isEqualTo("8:00〜12:00");
         assertThat(page.timeRequests().get(0).startTime()).isEqualTo(time(8, 0));
         assertThat(page.timeRequests().get(0).endTime()).isEqualTo(time(12, 0));
         assertThat(page.timeRequests().get(0).assigned()).isFalse();
@@ -467,6 +475,8 @@ class AssignmentServiceTests {
         // 同じ日の同じ開始時刻（11/2 13:00）は、ふりがなの順（たなか → やまだ）
         assertThat(page.timeAssignments().get(0).name()).isEqualTo("田中");
         assertThat(page.timeAssignments().get(0).status()).isEqualTo(AssignmentStatus.ABSENT);
+        assertThat(page.timeAssignments().get(0).workDateLabel()).isEqualTo("11月2日(月)");
+        assertThat(page.timeAssignments().get(0).timeLabel()).isEqualTo("13:00〜22:00");
         assertThat(page.timeAssignments().get(1).name()).isEqualTo("山田");
     }
 
@@ -547,6 +557,7 @@ class AssignmentServiceTests {
         assertThat(page.publishable()).isFalse();
         assertThat(page.notPublishableCode()).isNull();
         assertThat(page.publishedAt()).isEqualTo(NOW.minusDays(1));
+        assertThat(page.publishedAtLabel()).isEqualTo("2099/10/09 10:00");
         assertThat(cell(page, 11L, D1, DAY).confirmCode()).isEqualTo("C2604");
     }
 

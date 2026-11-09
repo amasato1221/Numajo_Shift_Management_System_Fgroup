@@ -126,11 +126,11 @@ public class ShiftWarningService {
         String dateLabel = DateTimeUtil.monthDay(date);
         String slotName = slot.getName();
         if (isTraineeOnly(covering)) {
-            warnings.add(new ShiftWarning(WarningType.TRAINEE_ONLY, date, slot.getId(), "W2603",
+            warnings.add(new ShiftWarning(WarningType.TRAINEE_ONLY, date, dateLabel, slot.getId(), "W2603",
                     new Object[] { dateLabel, slotName }));
         }
         if (covering.size() < requiredCount) {
-            warnings.add(new ShiftWarning(WarningType.SHORTAGE, date, slot.getId(), "W2601",
+            warnings.add(new ShiftWarning(WarningType.SHORTAGE, date, dateLabel, slot.getId(), "W2601",
                     new Object[] { dateLabel, slotName, covering.size(), requiredCount }));
         }
         List<User> users = covering.stream().map(ShiftAssignment::getUser).sorted(BY_KANA).toList();
@@ -138,14 +138,14 @@ public class ShiftWarningService {
         for (User user : users) {
             Set<Long> ownSkillIds = user.getSkills().stream().map(Skill::getId).collect(Collectors.toSet());
             if (!ownSkillIds.containsAll(requiredSkillIds)) {
-                warnings.add(new ShiftWarning(WarningType.SKILL, date, slot.getId(), "W2602",
+                warnings.add(new ShiftWarning(WarningType.SKILL, date, dateLabel, slot.getId(), "W2602",
                         new Object[] { dateLabel, slotName, user.getName() }));
             }
         }
         if (!date.isBefore(today)) {
             for (User user : users) {
                 if (!user.isActive()) {
-                    warnings.add(new ShiftWarning(WarningType.INACTIVE_STAFF, date, slot.getId(), "W2607",
+                    warnings.add(new ShiftWarning(WarningType.INACTIVE_STAFF, date, dateLabel, slot.getId(), "W2607",
                             new Object[] { dateLabel, slotName, user.getName() }));
                 }
             }

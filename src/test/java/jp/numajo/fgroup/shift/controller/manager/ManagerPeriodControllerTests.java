@@ -140,8 +140,8 @@ class ManagerPeriodControllerTests {
 
     @Test
     void 画面を表示する_ページと空のフォームと時刻の選択肢とスタッフの選択肢を持つ() throws Exception {
-        PeriodPageView page = new PeriodPageView(null, null, List.of(), null, List.of(), List.of(), List.of(), true,
-                true, null);
+        PeriodPageView page = new PeriodPageView(null, null, null, List.of(), null, List.of(), List.of(), List.of(),
+                true, true, null);
         when(assignmentService.getPeriodPage(1L)).thenReturn(page);
         when(assignmentService.findStaffOptions()).thenReturn(List.of());
 

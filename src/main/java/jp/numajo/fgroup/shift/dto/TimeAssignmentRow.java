@@ -11,10 +11,12 @@ import jp.numajo.fgroup.shift.constant.AssignmentStatus;
  * @param assignmentId 割当のID
  * @param name         氏名
  * @param workDate     日付
+ * @param workDateLabel 日付の表示（月日と曜日。例：11月1日(日)）
  * @param startTime    開始時刻
  * @param endTime      終了時刻
+ * @param timeLabel    時間帯の表示（例：13:00〜22:00）
  * @param status       出勤・欠勤
  */
-public record TimeAssignmentRow(Long assignmentId, String name, LocalDate workDate, LocalTime startTime,
-        LocalTime endTime, AssignmentStatus status) {
+public record TimeAssignmentRow(Long assignmentId, String name, LocalDate workDate, String workDateLabel,
+        LocalTime startTime, LocalTime endTime, String timeLabel, AssignmentStatus status) {
 }
