@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='staff'">
+<head>
+    <title th:text="${isNew} ? 'スタッフの登録' : 'スタッフの編集'">スタッフの登録</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <h1 class="h4 mb-3" th:text="${isNew} ? 'スタッフの登録' : 'スタッフの編集'">スタッフの登録</h1>
+
+    <!-- 初期パスワード（登録・初期化の直後に1回だけ） -->
+    <div class="alert alert-success" role="alert" th:if="${initialPassword != null}"
+         th:text="#{I2203(${initialPassword})}"></div>
+
+    <!-- 状態の表示（編集のときだけ） -->
+    <p class="text-muted small" th:unless="${isNew}">
+        <span th:if="${staff.updatedAtLabel != null}" th:text="|最終更新 ${staff.updatedAtLabel}|">最終更新 2026/10/12 21:03</span>
+        <span class="badge text-bg-danger ms-2" th:if="${staff.locked}"
+              th:text="|ロック中（${staff.lockedUntilLabel} まで）|">ロック中（13:30 まで）</span>
+    </p>
+
+    <form th:action="${isNew} ? @{/manager/staff} : @{/manager/staff/{id}(id=${staff.id})}"
+          th:object="${staffForm}" method="post">
+        <div class="mb-3">
+            <label for="name" class="form-label">氏名</label>
+            <input type="text" id="name" th:field="*{name}" class="form-control" maxlength="50"
+                   placeholder="山田 太郎">
+            <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="nameKana" class="form-label">ふりがな</label>
+            <input type="text" id="nameKana" th:field="*{nameKana}" class="form-control" maxlength="50"
+                   placeholder="やまだ たろう">
+            <div class="text-danger small" th:if="${#fields.hasErrors('nameKana')}" th:errors="*{nameKana}"></div>
+        </div>
+
+        <div class="mb-3">
+            <label for="loginId" class="form-label">ログインID</label>
+            <input type="text" id="loginId" th:field="*{loginId}" class="form-control" maxlength="20"
+                   autocomplete="off">
+            <div class="form-text">大文字・小文字は区別しません（<code>Yamada</code> と <code>yamada</code> は同じIDとして扱います）</div>
+            <div class="text-danger small" th:if="${#fields.hasErrors('loginId')}" th:errors="*{loginId}"></div>
+        </div>
+
+        <div class="mb-3">
+            <span class="form-label d-block">職能</span>
+            <div class="form-check form-check-inline" th:each="skill : ${skills}">
+                <input class="form-check-input" type="checkbox" name="skillIds" th:id="|skill-${skill.id}|"
+                       th:value="${skill.id}"
+                       th:checked="${staffForm.skillIds != null and staffForm.skillIds.contains(skill.id)}">
+                <label class="form-check-label" th:for="|skill-${skill.id}|" th:text="${skill.name}">レジ</label>
+            </div>
+            <div class="text-danger small" th:if="${#fields.hasErrors('skillIds')}" th:errors="*{skillIds}"></div>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="trainee" th:field="*{trainee}">
+                <label class="form-check-label" for="trainee">研修中</label>
+            </div>
+        </div>
+
+        <div class="mb-3" th:unless="${isNew}">
+            <span class="form-label d-block">状態</span>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" id="activeTrue" name="active" value="true"
+                       th:checked="*{active}">
+                <label class="form-check-label" for="activeTrue">有効</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" id="activeFalse" name="active" value="false"
+                       th:checked="*{!active}">
+                <label class="form-check-label" for="activeFalse">無効</label>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a class="btn btn-outline-secondary" th:href="@{/manager/staff}">戻る</a>
+        </div>
+    </form>
+
+    <!-- パスワード初期化（編集のときだけ。別のフォーム） -->
+    <form th:unless="${isNew}" th:action="@{/manager/staff/{id}/reset-password(id=${staff.id})}" method="post"
+          class="mt-4">
+        <button type="submit" class="btn btn-outline-danger" th:data-confirm="#{C2201}">パスワード初期化</button>
+    </form>
+</div>
+</body>
+</html>
