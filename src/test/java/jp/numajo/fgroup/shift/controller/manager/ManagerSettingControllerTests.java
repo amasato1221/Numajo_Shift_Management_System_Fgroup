@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
@@ -60,6 +61,9 @@ import jp.numajo.fgroup.shift.service.StoreSettingService;
  * （偽, 真）                        | E2902                   | 店舗名が51文字_E2902
  * （真, 偽）                        | E2901                   | 店舗名が空・空白だけ・送られない_E2901
  * （真, 真）                        | 起きない（空白を取ると0文字になり51文字以上にならない） | 空白だけ51文字_E2901だけになる
+ *
+ * 判定                            | 条件                                         | テスト
+ * setting.getUpdatedAt() == null  | 真：updatedAtLabel は null、偽：日時の文字     | 最終更新_日時あり・null（表示・再表示）
  * </pre>
  */
 class ManagerSettingControllerTests {
@@ -78,6 +82,7 @@ class ManagerSettingControllerTests {
         setting.setId((byte) 1);
         setting.setStoreName("テスト店");
         setting.setShowOthersShifts(true);
+        setting.setUpdatedAt(LocalDateTime.of(2026, 1, 5, 9, 3));
         when(storeSettingService.get()).thenReturn(setting);
         mvc = MockMvcBuilders.standaloneSetup(new ManagerSettingController(storeSettingService))
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
@@ -109,6 +114,7 @@ class ManagerSettingControllerTests {
     private void assertNotSaved(MvcResult result) {
         assertThat(result.getModelAndView().getViewName()).isEqualTo("manager/settings");
         assertThat(result.getModelAndView().getModel().get("setting")).isSameAs(setting);
+        assertThat(result.getModelAndView().getModel().get("updatedAtLabel")).isEqualTo("2026/01/05 09:03");
         verify(storeSettingService, never()).update(anyString(), anyBoolean(), anyLong());
     }
 
@@ -128,6 +134,31 @@ class ManagerSettingControllerTests {
         StoreSettingForm form = (StoreSettingForm) result.getModelAndView().getModel().get(FORM);
         assertThat(form.getStoreName()).isEqualTo("テスト店");
         assertThat(form.isShowOthersShifts()).isEqualTo(show);
+    }
+
+    @Test
+    void 最終更新_日時あり_日時の形でupdatedAtLabelに入れる() throws Exception {
+        mvc.perform(get("/manager/settings"))
+                .andExpect(model().attribute("updatedAtLabel", "2026/01/05 09:03"));
+    }
+
+    @Test
+    void 最終更新_null_updatedAtLabelもnull() throws Exception {
+        setting.setUpdatedAt(null);
+
+        MvcResult result = mvc.perform(get("/manager/settings")).andReturn();
+
+        assertThat(result.getModelAndView().getModel()).containsEntry("updatedAtLabel", null);
+    }
+
+    @Test
+    void 最終更新_null_入力エラーの再表示でもupdatedAtLabelはnull() throws Exception {
+        setting.setUpdatedAt(null);
+
+        MvcResult result = mvc.perform(post("/manager/settings").param("storeName", "")).andReturn();
+
+        assertThat(result.getModelAndView().getViewName()).isEqualTo("manager/settings");
+        assertThat(result.getModelAndView().getModel()).containsEntry("updatedAtLabel", null);
     }
 
     // ---------------------------------------------------------------- No.1 店舗名が空・空白だけ

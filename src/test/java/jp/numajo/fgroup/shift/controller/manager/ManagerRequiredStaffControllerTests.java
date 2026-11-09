@@ -181,6 +181,7 @@ class ManagerRequiredStaffControllerTests {
                 .andExpect(view().name("manager/required"))
                 .andExpect(model().attributeExists(DEFAULT_FORM, "requiredOverrideForm", "days"))
                 .andExpect(model().attribute("ym", THIS_MONTH))
+                .andExpect(model().attribute("ymLabel", "2026年11月"))
                 .andExpect(model().attribute("prevYm", YearMonth.of(2026, 10)))
                 .andExpect(model().attribute("nextYm", YearMonth.of(2026, 12)));
 
@@ -202,6 +203,7 @@ class ManagerRequiredStaffControllerTests {
     void 年月を指定して表示する_その月になり年をまたいで前後の月を出す() throws Exception {
         mvc.perform(get("/manager/required").param("ym", "2027-01"))
                 .andExpect(model().attribute("ym", YearMonth.of(2027, 1)))
+                .andExpect(model().attribute("ymLabel", "2027年1月"))
                 .andExpect(model().attribute("prevYm", YearMonth.of(2026, 12)))
                 .andExpect(model().attribute("nextYm", YearMonth.of(2027, 2)));
     }

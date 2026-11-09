@@ -337,11 +337,15 @@ class ShiftCalendarServiceTests {
         MonthCalendar actual = service.buildMonth(USER_ID, YearMonth.of(2026, 10));
 
         assertThat(actual.ym()).isEqualTo(YearMonth.of(2026, 10));
+        assertThat(actual.ymLabel()).isEqualTo("2026年10月");
         assertThat(actual.prevYm()).isEqualTo(YearMonth.of(2026, 9));
         assertThat(actual.nextYm()).isEqualTo(YearMonth.of(2026, 11));
         assertThat(actual.weeks()).hasSize(5).allSatisfy(week -> assertThat(week).hasSize(7));
         assertThat(actual.weeks().get(0).get(0).date()).isEqualTo(d("2026-09-28"));
         assertThat(actual.weeks().get(4).get(6).date()).isEqualTo(d("2026-11-01"));
+        // 日付の数字の〜Label（前月・翌月の日も入れる）
+        assertThat(actual.weeks().get(0).get(0).dayLabel()).isEqualTo("28");
+        assertThat(actual.weeks().get(4).get(6).dayLabel()).isEqualTo("1");
         verify(assignmentRepository).findByUserIdAndWorkDateBetween(USER_ID, d("2026-09-28"), d("2026-11-01"));
         verify(periodRepository).findOverlapping(d("2026-09-28"), d("2026-11-01"));
     }
@@ -425,6 +429,8 @@ class ShiftCalendarServiceTests {
         assertThat(actual.weeks()).hasSize(3).allSatisfy(week -> assertThat(week).hasSize(7));
         assertThat(actual.weeks().get(0).get(0).date()).isEqualTo(d("2026-10-26"));
         assertThat(actual.weeks().get(2).get(6).date()).isEqualTo(d("2026-11-15"));
+        assertThat(actual.weeks().get(0).get(0).dayLabel()).isEqualTo("26");
+        assertThat(actual.weeks().get(2).get(6).dayLabel()).isEqualTo("15");
         // F偽：期間より前の日
         CalendarDay oct31 = day(actual.weeks(), d("2026-10-31"));
         assertThat(oct31.inMonth()).isFalse();

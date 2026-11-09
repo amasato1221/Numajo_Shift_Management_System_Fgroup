@@ -157,9 +157,9 @@ class RequiredStaffServiceTests {
         List<RequiredDayView> days = requiredStaffService.getMonth(ym);
 
         assertThat(days).hasSize(30);
-        assertThat(days.get(0)).isEqualTo(new RequiredDayView(SUN, 1, false, 10, false));
+        assertThat(days.get(0)).isEqualTo(new RequiredDayView(SUN, "11月1日(日)", 1, false, 10, false));
         // 6章 No.3：上書きを0人にすると 0（既定値の 3 は使わない）
-        assertThat(days.get(2)).isEqualTo(new RequiredDayView(TUE, 0, true, 12, false));
+        assertThat(days.get(2)).isEqualTo(new RequiredDayView(TUE, "11月3日(火)", 0, true, 12, false));
         assertThat(days.get(29).workDate()).isEqualTo(LocalDate.of(2026, 11, 30));
     }
 
@@ -171,8 +171,8 @@ class RequiredStaffServiceTests {
 
         List<RequiredDayView> days = requiredStaffService.getMonth(YearMonth.of(2026, 11));
 
-        assertThat(days.get(2)).isEqualTo(new RequiredDayView(TUE, 0, false, 5, true));
-        assertThat(days.get(3)).isEqualTo(new RequiredDayView(TUE.plusDays(1), 0, false, 0, false));
+        assertThat(days.get(2)).isEqualTo(new RequiredDayView(TUE, "11月3日(火)", 0, false, 5, true));
+        assertThat(days.get(3)).isEqualTo(new RequiredDayView(TUE.plusDays(1), "11月4日(水)", 0, false, 0, false));
     }
 
     @Test

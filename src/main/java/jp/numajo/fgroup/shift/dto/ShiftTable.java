@@ -5,15 +5,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jp.numajo.fgroup.shift.constant.BadgeType;
-import jp.numajo.fgroup.shift.util.DateTimeUtil;
 
 /**
  * シフト表（SB-04・SM-08、30-07）。
  *
- * @param days 期間の日付（開始日から終了日まで）
+ * @param days 期間の日付の列（開始日から終了日まで。見出しの文字は DayColumn の〜Label）
  * @param rows スタッフごとの行（ふりがな順）
  */
-public record ShiftTable(List<LocalDate> days, List<ShiftTableRow> rows) {
+public record ShiftTable(List<DayColumn> days, List<ShiftTableRow> rows) {
 
     /**
      * その日に、その種類のバッジがある人の名前を行の順に並べる（SB-04 のスマホのカード）。
@@ -33,35 +32,5 @@ public record ShiftTable(List<LocalDate> days, List<ShiftTableRow> rows) {
             }
         }
         return names;
-    }
-
-    /**
-     * 表の見出しの日付（91 の日付の表示：DateTimeUtil で作る）。
-     *
-     * @param day 日付
-     * @return 例：11/1
-     */
-    public String dateLabel(LocalDate day) {
-        return DateTimeUtil.shortDate(day);
-    }
-
-    /**
-     * 表の見出しの曜日。
-     *
-     * @param day 日付
-     * @return 例：日
-     */
-    public String dayOfWeekLabel(LocalDate day) {
-        return DateTimeUtil.dayOfWeek(day);
-    }
-
-    /**
-     * スマホのカードの見出し。
-     *
-     * @param day 日付
-     * @return 例：11/1(日)
-     */
-    public String cardLabel(LocalDate day) {
-        return DateTimeUtil.shortDateWithDay(day);
     }
 }

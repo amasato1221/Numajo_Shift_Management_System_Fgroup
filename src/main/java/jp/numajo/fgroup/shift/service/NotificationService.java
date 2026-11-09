@@ -73,7 +73,8 @@ public class NotificationService {
             body = body.substring(0, ROW_BODY_MAX) + ELLIPSIS;
         }
         return new NoticeRow(n.getId(), n.getType(), n.getType().getLabel(), n.getTitle(), body,
-                n.getCreatedAt(), n.getReadAt() == null);
+                n.getCreatedAt(), n.getCreatedAt() == null ? null : DateTimeUtil.dateTime(n.getCreatedAt()),
+                n.getReadAt() == null);
     }
 
     /** シフトの公開を、有効なバイト全員に知らせる（PUBLISHED。20-SM-06 3.6）。 */

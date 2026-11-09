@@ -95,7 +95,7 @@ class StaffHomeControllerTests {
 
     private StaffHomeView viewOf(YearMonth ym) {
         StaffHomeView view = new StaffHomeView(null, List.of(), List.of(),
-                new MonthCalendar(ym, List.of(), ym.minusMonths(1), ym.plusMonths(1)));
+                new MonthCalendar(ym, "", List.of(), ym.minusMonths(1), ym.plusMonths(1)));
         when(staffHomeService.getHome(USER_ID, ym)).thenReturn(view);
         return view;
     }
