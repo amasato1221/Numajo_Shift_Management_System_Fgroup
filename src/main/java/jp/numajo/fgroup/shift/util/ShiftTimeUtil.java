@@ -20,18 +20,21 @@ public final class ShiftTimeUtil {
     /** 時刻の刻み（分） */
     public static final int STEP_MINUTES = 30;
 
+    /** プルダウンで送る値の形（例：08:00）。フォームの @DateTimeFormat(pattern = "HH:mm") に合わせる */
+    private static final DateTimeFormatter VALUE_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+
     private static final List<LocalTime> TIME_OPTIONS;
     private static final List<SelectOption> TIME_SELECT_OPTIONS;
 
     static {
         List<LocalTime> list = new ArrayList<>();
+        List<SelectOption> selectOptions = new ArrayList<>();
         for (LocalTime t = MIN_TIME; !t.isAfter(MAX_TIME); t = t.plusMinutes(STEP_MINUTES)) {
             list.add(t);
+            selectOptions.add(new SelectOption(t.format(VALUE_FORMAT), DateTimeUtil.time(t)));
         }
         TIME_OPTIONS = Collections.unmodifiableList(list);
-        TIME_SELECT_OPTIONS = list.stream()
-                .map(t -> new SelectOption(t.format(DateTimeFormatter.ofPattern("HH:mm")), DateTimeUtil.time(t)))
-                .toList();
+        TIME_SELECT_OPTIONS = Collections.unmodifiableList(selectOptions);
     }
 
     private ShiftTimeUtil() {
@@ -42,7 +45,10 @@ public final class ShiftTimeUtil {
         return TIME_OPTIONS;
     }
 
-    /** 時刻プルダウンの選択肢（値は HH:mm、表示は H:mm）。 */
+    /**
+     * 時刻プルダウンに出す選択肢（8:00〜22:00 の30分刻み、29個）。value は「08:00」、label は「8:00」。
+     * テンプレートは value と label を出すだけにする（91_コーディング規約 5.1 の日付の表示）。
+     */
     public static List<SelectOption> timeSelectOptions() {
         return TIME_SELECT_OPTIONS;
     }
