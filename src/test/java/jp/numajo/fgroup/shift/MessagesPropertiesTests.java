@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
  * messages.properties（93_メッセージ一覧 3章）の中身のテスト。
  *
  * <p>
- * 判定のあるコードがないため、4つの網羅の対象はない。93 の決まり（170件、コードの形、シングルクォートを使わない）を確かめる。
+ * 判定のあるコードがないため、4つの網羅の対象はない。93 の決まり（172件、コードの形、シングルクォートを使わない）を確かめる。
  * </p>
  */
 class MessagesPropertiesTests {
@@ -38,8 +38,8 @@ class MessagesPropertiesTests {
     }
 
     @Test
-    void 全文を読む_170件ある() throws IOException {
-        assertEquals(170, readEntries().size());
+    void 全文を読む_172件ある() throws IOException {
+        assertEquals(172, readEntries().size());
     }
 
     @Test

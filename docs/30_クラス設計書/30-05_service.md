@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-05 |
-| 版 | 第1.6版（令和8年11月9日） |
+| 版 | 第1.7版（令和8年11月9日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -17,6 +17,7 @@
 | 1.4 | 令和8年11月5日 | 0章の「メッセージの文」の決まりに、期間の表示名・状態名・ICS の件名など短い表示用の文字は Service に書いてよいことを足した（3.5 の表示名との食い違いを直した） | 新井 |
 | 1.5 | 令和8年11月6日 | SB-01 の実装（PR #49）に合わせた：1.2 に NotificationService#toRow を足し、2.1 StaffHomeService の依存に SlotRepository を足した | 新井 |
 | 1.6 | 令和8年11月9日 | 0章に「日付の表示」の決まりを足した（10_基本設計書 5.3 第1.4版）。toOption で periodLabel・deadlineLabel・deadlineShortLabel も入れることを書いた | 新井 |
+| 1.7 | 令和8年11月9日 | SM-06 の実装（PR #57）に合わせた：3.6 に AssignmentService#findStaffOptions、3.7 に ShiftWarningService の covers・isTraineeOnly・BY_KANA（package-private）を足した | 新井 |
 
 ## 0. service の決まり
 
@@ -230,6 +231,7 @@
 | `void assignTime(Long periodId, Long userId, LocalDate workDate, LocalTime start, LocalTime end, Long operatorId)` | 更新 | 20-SM-06 3.4 |
 | `void delete(Long periodId, Long assignmentId, Long operatorId)` | 更新 | 20-SM-06 3.5 |
 | `PublishResult publish(Long periodId, Long operatorId)` | 更新 | 20-SM-06 3.6 |
+| `List<User> findStaffOptions()` | 読取 | 20-SM-06 3.2-3 の `staffOptions`。有効なバイト（`UserRepository#findActiveStaff`、ふりがな順） |
 | `private void checkNoOverlap(User user, LocalDate date, LocalTime start, LocalTime end)` | － | 重なる ASSIGNED があれば E2605 |
 
 ### 3.7 `ShiftWarningService`
@@ -241,6 +243,9 @@
 | `List<ShiftWarning> calculate(ShiftPeriod period)` | 読取 | 必要なデータを取ってから下のメソッドを呼ぶ |
 | `List<ShiftWarning> calculate(ShiftPeriod period, List<Slot> slots, List<ShiftAssignment> assignments, Map<LocalDate, Map<Byte, Integer>> required, LocalDate today)` | － | 20-SM-06 4章（DBを使わない。単体テストはこのメソッドで行う） |
 | `int countFor(LocalDate date, Slot slot)` | 読取 | その日・その枠と重なる ASSIGNED の数（`findAssignedByWorkDate`） |
+| `static boolean covers(ShiftAssignment assignment, Slot slot)` | － | 割当をその枠に数えるか（枠の割当はその枠だけ、時間指定は時間が重なる枠すべて）。package-private（`AssignmentService` の最下行の数でも使う） |
+| `static boolean isTraineeOnly(List<ShiftAssignment> covering)` | － | 全員が研修中か（0人は false）。package-private |
+| `static final Comparator<User> BY_KANA` | － | ふりがな順（null は最後）、同じなら ID 順。package-private（20-SM-06 4章の「氏名のふりがな順」） |
 
 ### 3.8 `AbsenceService`
 
