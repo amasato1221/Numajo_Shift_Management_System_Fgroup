@@ -65,7 +65,7 @@
                 <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
                     <a class="btn btn-outline-secondary btn-sm" th:href="@{/manager/required(ym=${prevYm})}"
                        aria-label="前の月">〈</a>
-                    <span class="fw-bold" th:text="${ym.year} + '年' + ${ym.monthValue} + '月'">2026年11月</span>
+                    <span class="fw-bold" th:text="${ymLabel}">2026年11月</span>
                     <a class="btn btn-outline-secondary btn-sm" th:href="@{/manager/required(ym=${nextYm})}"
                        aria-label="次の月">〉</a>
                 </div>
@@ -108,7 +108,7 @@
                             <tr th:each="d : ${days}" th:with="dow=${d.workDate.dayOfWeek.value}">
                                 <td class="text-nowrap"
                                     th:classappend="${dow == 7} ? 'text-danger' : (${dow == 6} ? 'text-primary' : '')"
-                                    th:text="${T(jp.numajo.fgroup.shift.util.DateTimeUtil).monthDay(d.workDate)}">
+                                    th:text="${d.workDateLabel}">
                                     11月1日(日)</td>
                                 <td>
                                     <th:block th:replace="~{:: cell(${d.workDate}, 1, ${d.dayCount}, ${d.dayOverridden})}"/>

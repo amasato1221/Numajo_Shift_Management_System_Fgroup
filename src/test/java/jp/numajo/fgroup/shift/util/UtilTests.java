@@ -9,6 +9,7 @@ import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -210,6 +211,36 @@ class UtilTests {
         String actual = DateTimeUtil.shortDate(LocalDate.of(2026, 10, 15));
 
         assertThat(actual).isEqualTo("10/15");
+    }
+
+    @Test
+    void dayOfWeek_曜日だけ() {
+        assertThat(DateTimeUtil.dayOfWeek(LocalDate.of(2026, 11, 1))).isEqualTo("日");
+        assertThat(DateTimeUtil.dayOfWeek(LocalDate.of(2026, 11, 7))).isEqualTo("土");
+    }
+
+    @Test
+    void shortDateWithDay_月日と曜日を0埋めしない() {
+        assertThat(DateTimeUtil.shortDateWithDay(LocalDate.of(2026, 11, 1))).isEqualTo("11/1(日)");
+        assertThat(DateTimeUtil.shortDateWithDay(LocalDate.of(2026, 12, 16))).isEqualTo("12/16(水)");
+    }
+
+    @Test
+    void timeRange_開始と終了を時は0埋めせず波ダッシュでつなぐ() {
+        assertThat(DateTimeUtil.timeRange(LocalTime.of(8, 0), LocalTime.of(17, 0))).isEqualTo("8:00〜17:00");
+        assertThat(DateTimeUtil.timeRange(LocalTime.of(13, 30), LocalTime.of(22, 5))).isEqualTo("13:30〜22:05");
+    }
+
+    @Test
+    void yearMonth_年と月を0埋めしない() {
+        assertThat(DateTimeUtil.yearMonth(YearMonth.of(2026, 1))).isEqualTo("2026年1月");
+        assertThat(DateTimeUtil.yearMonth(YearMonth.of(2026, 10))).isEqualTo("2026年10月");
+    }
+
+    @Test
+    void day_日だけを0埋めしない() {
+        assertThat(DateTimeUtil.day(LocalDate.of(2026, 11, 1))).isEqualTo("1");
+        assertThat(DateTimeUtil.day(LocalDate.of(2026, 10, 24))).isEqualTo("24");
     }
 
     @Test

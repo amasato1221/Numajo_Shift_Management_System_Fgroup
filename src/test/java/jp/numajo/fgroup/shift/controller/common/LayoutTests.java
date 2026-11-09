@@ -368,7 +368,8 @@ class LayoutTests {
     }
 
     /** テスト用のチャットのメッセージ（30-07 ChatMessageView と同じ形）。 */
-    public record TestChatMessage(Long id, String senderName, String body, LocalDateTime createdAt, boolean mine) {
+    public record TestChatMessage(Long id, String senderName, String body, LocalDateTime createdAt,
+            String createdAtLabel, boolean mine) {
     }
 
     /** 空白の取り方を確かめるためのフォーム。 */
@@ -391,8 +392,9 @@ class LayoutTests {
                         new TestBadge(BadgeType.TIME, "☀☾", "13-22", LocalTime.of(13, 0), LocalTime.of(22, 0))));
                 model.addAttribute("messages", List.of(
                         new TestChatMessage(1L, "店長 花子", "明日は来られますか", LocalDateTime.of(2026, 10, 15, 9, 5),
-                                false),
-                        new TestChatMessage(2L, "山田 太郎", "行けます", LocalDateTime.of(2026, 10, 15, 9, 10), true)));
+                                "10/15 9:05", false),
+                        new TestChatMessage(2L, "山田 太郎", "行けます", LocalDateTime.of(2026, 10, 15, 9, 10),
+                                "10/15 9:10", true)));
             } else if ("empty".equals(parts)) {
                 model.addAttribute("messages", List.of());
             }

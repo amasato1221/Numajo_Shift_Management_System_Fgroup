@@ -195,8 +195,11 @@ public class PeriodService {
     }
 
     private static PeriodOption toOption(ShiftPeriod period, String label) {
+        LocalDateTime deadlineAt = period.getDeadlineAt();
         return new PeriodOption(period.getId(), period.getStartDate(), period.getEndDate(),
-                period.getDeadlineAt(), period.getStatus(), label);
+                DateTimeUtil.period(period.getStartDate(), period.getEndDate()),
+                deadlineAt, DateTimeUtil.dateTime(deadlineAt), DateTimeUtil.shortDateTime(deadlineAt),
+                period.getStatus(), label);
     }
 
     /** 終了日。開始日が1日なら15日、16日なら月末。 */

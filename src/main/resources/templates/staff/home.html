@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='home'">
+<head>
+    <title>ホーム</title>
+</head>
+<body>
+    <!--
+      SB-01 ホーム（次の出勤）。20-SB-01 1章。
+      PC（1024px 以上）は左の列に 1〜3、右の列に 4。スマホ・タブレットは 1→2→3→4 の順に縦に並べる。
+    -->
+    <div layout:fragment="content" class="staff-home">
+        <div class="staff-home-side">
+            <!-- 1 次の出勤 -->
+            <div class="card mb-3">
+                <div class="card-header fw-bold">⏰ 次の出勤</div>
+                <div class="card-body">
+                    <p class="mb-0" th:if="${home.nextShift == null}" th:text="#{I1101}"></p>
+                    <th:block th:unless="${home.nextShift == null}" th:with="n=${home.nextShift}">
+                        <div class="home-next-date" th:text="${n.workDateLabel}">10月24日(土)</div>
+                        <div class="home-next-time">
+                            <span th:replace="~{fragments/shift-badge :: badge(${n.badge})}"></span>
+                            <span th:text="${n.timeLabel}">8:00〜17:00</span>
+                        </div>
+                    </th:block>
+                </div>
+            </div>
+
+            <!-- 2 未提出のお知らせ（1件以上のときだけ） -->
+            <div class="card mb-3 home-unsubmitted" th:unless="${#lists.isEmpty(home.unsubmittedPeriods)}">
+                <div class="card-header fw-bold">⚠ 希望が未提出です</div>
+                <ul class="list-unstyled card-body mb-0">
+                    <li class="home-unsubmitted-row" th:each="p : ${home.unsubmittedPeriods}">
+                        <span th:text="|${p.periodLabel} の希望がまだです（期限 ${p.deadlineShortLabel}）|">
+                            11/1〜11/15 の希望がまだです（期限 10/15 23:59）</span>
+                        <a class="btn btn-warning btn-sm text-nowrap"
+                           th:href="@{/staff/requests(periodId=${p.id})}">希望を出す</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 3 新しいお知らせ（未読を新しい順に3件） -->
+            <div class="card mb-3">
+                <div class="card-header fw-bold">🔔 新しいお知らせ</div>
+                <div class="card-body">
+                    <p th:if="${#lists.isEmpty(home.latestNotices)}" th:text="#{I1102}"></p>
+                    <ul class="list-unstyled home-notices" th:unless="${#lists.isEmpty(home.latestNotices)}">
+                        <li th:each="row : ${home.latestNotices}">
+                            <form th:action="@{/notices/{id}/open(id=${row.id})}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-link p-0 text-start"
+                                        th:text="${row.title}">11月前半のシフトが公開されました</button>
+                            </form>
+                            <div class="home-notice-date" th:text="${row.createdAtLabel}">2026/10/16 09:00</div>
+                        </li>
+                    </ul>
+                    <a th:href="@{/notices}">すべて見る</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 今月のシフト -->
+        <div class="card staff-home-calendar" th:with="cal=${home.calendar}">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-bold">今月のシフト</span>
+                <span class="home-month-nav">
+                    <a class="btn btn-outline-secondary btn-sm" aria-label="前の月"
+                       th:href="@{/staff/home(ym=${cal.prevYm})}">〈</a>
+                    <span class="fw-bold mx-2"
+                          th:text="${cal.ymLabel}">2026年10月</span>
+                    <a class="btn btn-outline-secondary btn-sm" aria-label="次の月"
+                       th:href="@{/staff/home(ym=${cal.nextYm})}">〉</a>
+                </span>
+            </div>
+            <div class="card-body">
+                <table class="shift-calendar">
+                    <thead>
+                        <tr>
+                            <th>月</th>
+                            <th>火</th>
+                            <th>水</th>
+                            <th>木</th>
+                            <th>金</th>
+                            <th class="is-sat">土</th>
+                            <th class="is-sun">日</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="week : ${cal.weeks}">
+                            <td th:each="day : ${week}" class="shift-calendar-day"
+                                th:classappend="${(day.today ? 'is-today ' : '') + (day.inMonth ? '' : 'is-outside')}">
+                                <a th:if="${day.periodId != null}" class="shift-calendar-date"
+                                   th:classappend="${day.date.dayOfWeek.value == 6 ? 'is-sat' : (day.date.dayOfWeek.value == 7 ? 'is-sun' : '')}"
+                                   th:href="@{/staff/shifts(periodId=${day.periodId})}"
+                                   th:text="${day.dayLabel}">1</a>
+                                <span th:unless="${day.periodId != null}" class="shift-calendar-date"
+                                      th:classappend="${day.date.dayOfWeek.value == 6 ? 'is-sat' : (day.date.dayOfWeek.value == 7 ? 'is-sun' : '')}"
+                                      th:text="${day.dayLabel}">1</span>
+                                <th:block th:each="b : ${day.badges}">
+                                    <span th:replace="~{fragments/shift-badge :: badge(${b})}"></span>
+                                </th:block>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- 4-3 凡例 -->
+                <ul class="list-inline home-legend mt-3 mb-0">
+                    <li class="list-inline-item"><span class="shift-badge badge-day">☀日勤</span> 8:00-17:00</li>
+                    <li class="list-inline-item"><span class="shift-badge badge-evening">☾夕勤</span> 17:00-22:00</li>
+                    <li class="list-inline-item"><span class="shift-badge badge-pending">グレー</span> 未確定</li>
+                    <li class="list-inline-item"><span class="shift-badge badge-absent">取り消し線</span> 欠勤</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

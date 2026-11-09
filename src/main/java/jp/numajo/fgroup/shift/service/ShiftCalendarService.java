@@ -73,10 +73,10 @@ public class ShiftCalendarService {
 
         List<List<CalendarDay>> weeks = buildWeeks(from, to, date -> {
             boolean inMonth = YearMonth.from(date).equals(ym);
-            return new CalendarDay(date, inMonth, date.equals(today), badgesOf(badges, date, inMonth),
-                    periodIdOf(periods, date));
+            return new CalendarDay(date, DateTimeUtil.day(date), inMonth, date.equals(today),
+                    badgesOf(badges, date, inMonth), periodIdOf(periods, date));
         });
-        return new MonthCalendar(ym, weeks, ym.minusMonths(1), ym.plusMonths(1));
+        return new MonthCalendar(ym, DateTimeUtil.yearMonth(ym), weeks, ym.minusMonths(1), ym.plusMonths(1));
     }
 
     /**
@@ -94,8 +94,8 @@ public class ShiftCalendarService {
 
         List<List<CalendarDay>> weeks = buildWeeks(weekStart(start), weekEnd(end), date -> {
             boolean inPeriod = contains(start, end, date);
-            return new CalendarDay(date, inPeriod, date.equals(today), badgesOf(badges, date, inPeriod),
-                    inPeriod ? period.getId() : null);
+            return new CalendarDay(date, DateTimeUtil.day(date), inPeriod, date.equals(today),
+                    badgesOf(badges, date, inPeriod), inPeriod ? period.getId() : null);
         });
         return new PeriodCalendar(PeriodService.toOption(period), weeks);
     }

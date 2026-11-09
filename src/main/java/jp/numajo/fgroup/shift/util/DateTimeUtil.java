@@ -3,11 +3,13 @@ package jp.numajo.fgroup.shift.util;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 /**
  * 日付・時刻の表示形式（10_基本設計書 5.3）。
+ * Service が dto の「〜Label」を作るときに使う（テンプレートからは呼ばない）。
  */
 public final class DateTimeUtil {
 
@@ -21,6 +23,9 @@ public final class DateTimeUtil {
     private static final DateTimeFormatter DATE_TIME_SECONDS = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
     private static final DateTimeFormatter PRINT_START = DateTimeFormatter.ofPattern("yyyy/M/d(E)", Locale.JAPANESE);
     private static final DateTimeFormatter PRINT_END = DateTimeFormatter.ofPattern("M/d(E)", Locale.JAPANESE);
+    private static final DateTimeFormatter DAY_OF_WEEK = DateTimeFormatter.ofPattern("E", Locale.JAPANESE);
+    private static final DateTimeFormatter YEAR_MONTH = DateTimeFormatter.ofPattern("yyyy年M月");
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d");
 
     private DateTimeUtil() {
     }
@@ -45,6 +50,21 @@ public final class DateTimeUtil {
         return time.format(TIME);
     }
 
+    /** 時間帯。例：8:00〜17:00 */
+    public static String timeRange(LocalTime start, LocalTime end) {
+        return start.format(TIME) + "〜" + end.format(TIME);
+    }
+
+    /** 例：2026年10月 */
+    public static String yearMonth(YearMonth ym) {
+        return ym.format(YEAR_MONTH);
+    }
+
+    /** 日だけ。例：1、24 */
+    public static String day(LocalDate date) {
+        return date.format(DAY);
+    }
+
     /** 例：11/1〜11/15 */
     public static String period(LocalDate start, LocalDate end) {
         return start.format(SHORT_DATE) + "〜" + end.format(SHORT_DATE);
@@ -53,6 +73,16 @@ public final class DateTimeUtil {
     /** 例：10/15 */
     public static String shortDate(LocalDate date) {
         return date.format(SHORT_DATE);
+    }
+
+    /** 曜日だけ。例：土 */
+    public static String dayOfWeek(LocalDate date) {
+        return date.format(DAY_OF_WEEK);
+    }
+
+    /** 月日と曜日。例：11/1(日) */
+    public static String shortDateWithDay(LocalDate date) {
+        return date.format(PRINT_END);
     }
 
     /** 例：2025/12/3 */

@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-07 |
-| 版 | 第1.2版（令和8年11月2日） |
+| 版 | 第1.3版（令和8年11月9日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -13,6 +13,7 @@
 | 1.0 | 令和8年10月21日 | 初版作成 | 新井 |
 | 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：RequestPageView に submissionState・statusLabel を追加（H2） | 新井 |
 | 1.2 | 令和8年11月2日 | 実装中の質問（栗原）を反映：DayRequestForm#workDate に ISO 形式の指定を追加。RequestDayRow に dateLabel、RequestPageView に deadlineLabel・submittedAtLabel、StaffDetailView に updatedAtLabel・lockedUntilLabel を追加。StaffRowView の skillNames を職能名の順にした | 新井 |
+| 1.3 | 令和8年11月9日 | 日付の表示の統一（10_基本設計書 5.3 第1.4版）：3章の「テンプレートで `#temporals.format` を使ってよい」を削除し、日付型の項目には表示用の `〜Label` を必ず並べる決まりにした。4章の dto に `〜Label` を追加し、日付の列を表す `DayColumn` を新しく作った（`ShiftTable`・`AssignmentMatrix` の `days`） | 新井 |
 
 ## 1. form の決まり
 
@@ -76,54 +77,58 @@ public class SkillForm {
 
 - `jp.numajo.fgroup.shift.dto` に `record` で作ります。1ファイル1レコード。
 - 画面で `${row.name}` のように読むので、項目名は下の表のとおりにします（テンプレートと合わせるため変えてはいけない）。
-- 表示用の文字列（「11/1〜11/15」など）は、Service で `DateTimeUtil` を使って作って入れます。テンプレートで日付を組み立てる場合は `#temporals.format(date, 'M/d')` を使ってよい。
+- 日付・日時・時刻の項目は `LocalDate`／`LocalDateTime`／`LocalTime`／`YearMonth` のまま持ちます（データを欠かさない。並べ替え・比較・リンクの値に使う）。
+- 画面に出す日付の文字は、**その項目のすぐ後ろに `〜Label`（`String`）を置き**、Service が `DateTimeUtil` で作って入れます（例：`LocalDateTime createdAt, String createdAtLabel`）。どの形式にするかは下の表の「Label の形式」の列のとおりです（10_基本設計書 5.3 の表の名前）。
+- テンプレートは `〜Label` を出すだけにし、日付の文字を組み立ててはいけません（`#temporals`・`#dates`・`T(…DateTimeUtil)` も使わない。91_コーディング規約 5.1）。
+- 値が null のとき（未提出・未通知など）は `〜Label` も null にし、テンプレートで `th:if` を使って出し分けます。
 
 ## 4. dto の一覧
 
 | record | 項目（順番どおり） | 作る Service |
 | --- | --- | --- |
 | `SelectOption` | `String value, String label` | 各 Service（プルダウン） |
-| `PeriodOption` | `Long id, LocalDate startDate, LocalDate endDate, LocalDateTime deadlineAt, PeriodStatus status, String label` | `PeriodService#toOption` |
-| `NoticeRow` | `Long id, NotificationType type, String typeLabel, String title, String body, LocalDateTime createdAt, boolean unread` | `NotificationService` |
+| `PeriodOption` | `Long id, LocalDate startDate, LocalDate endDate, String periodLabel, LocalDateTime deadlineAt, String deadlineLabel, String deadlineShortLabel, PeriodStatus status, String label`（`periodLabel`＝募集期間、`deadlineLabel`＝日時、`deadlineShortLabel`＝日時（短い）。`label` はプルダウンの表示名で、30-05 の PeriodService のとおり） | `PeriodService#toOption` |
+| `NoticeRow` | `Long id, NotificationType type, String typeLabel, String title, String body, LocalDateTime createdAt, String createdAtLabel, boolean unread`（`createdAtLabel`＝日時） | `NotificationService` |
 | `ShiftBadge` | `BadgeType type, String icons, String timeText, LocalTime startTime, LocalTime endTime` | `ShiftCalendarService` |
-| `CalendarDay` | `LocalDate date, boolean inMonth, boolean today, List<ShiftBadge> badges, Long periodId` | `ShiftCalendarService` |
-| `MonthCalendar` | `YearMonth ym, List<List<CalendarDay>> weeks, YearMonth prevYm, YearMonth nextYm` | `ShiftCalendarService` |
+| `CalendarDay` | `LocalDate date, String dayLabel, boolean inMonth, boolean today, List<ShiftBadge> badges, Long periodId`（`dayLabel`＝日だけ） | `ShiftCalendarService` |
+| `MonthCalendar` | `YearMonth ym, String ymLabel, List<List<CalendarDay>> weeks, YearMonth prevYm, YearMonth nextYm`（`ymLabel`＝年月） | `ShiftCalendarService` |
 | `PeriodCalendar` | `PeriodOption period, List<List<CalendarDay>> weeks` | `ShiftCalendarService` |
-| `NextShiftView` | `LocalDate workDate, ShiftBadge badge, LocalTime startTime, LocalTime endTime` | `StaffHomeService` |
+| `NextShiftView` | `LocalDate workDate, String workDateLabel, ShiftBadge badge, LocalTime startTime, LocalTime endTime, String timeLabel`（`workDateLabel`＝日付（月日と曜日）、`timeLabel`＝時間帯） | `StaffHomeService` |
 | `StaffHomeView` | `NextShiftView nextShift, List<PeriodOption> unsubmittedPeriods, List<NoticeRow> latestNotices, MonthCalendar calendar` | `StaffHomeService` |
-| `RequestDayRow` | `LocalDate workDate, String dateLabel, boolean dayQualified, boolean eveningQualified` | `ShiftRequestService` |
-| `RequestPageView` | `PeriodOption period, List<PeriodOption> periodOptions, String deadlineLabel, boolean editable, LocalDateTime submittedAt, String submittedAtLabel, SubmissionState submissionState, String statusLabel, List<RequestDayRow> days, String staffName` | `ShiftRequestService` |
+| `RequestDayRow` | `LocalDate workDate, String dateLabel, boolean dayQualified, boolean eveningQualified`（`dateLabel`＝日付（月日と曜日）） | `ShiftRequestService` |
+| `RequestPageView` | `PeriodOption period, List<PeriodOption> periodOptions, String deadlineLabel, boolean editable, LocalDateTime submittedAt, String submittedAtLabel, SubmissionState submissionState, String statusLabel, List<RequestDayRow> days, String staffName`（`deadlineLabel`・`submittedAtLabel`＝日時） | `ShiftRequestService` |
 | `ShiftTableRow` | `Long userId, String name, boolean trainee, Map<LocalDate, List<ShiftBadge>> cells, int workDays` | `ShiftTableService` |
-| `ShiftTable` | `List<LocalDate> days, List<ShiftTableRow> rows` | `ShiftTableService` |
-| `ChatMessageView` | `Long id, String senderName, String body, LocalDateTime createdAt, boolean mine` | `ChatService` |
-| `ChatListRow` | `Long staffId, String initial, String staffName, boolean active, String lastBody, LocalDateTime lastAt, long unreadCount` | `ChatService` |
+| `DayColumn` | `LocalDate date, String dateLabel, String dayLabel, String dayOfWeekLabel, String dateWithDayLabel`（表の日付の列。`dateLabel`＝日付（短い）、`dayLabel`＝日だけ、`dayOfWeekLabel`＝曜日だけ、`dateWithDayLabel`＝月日と曜日（短い）。セルは `row.cells[col.date]` で引く） | `ShiftTableService`、`AssignmentService` |
+| `ShiftTable` | `List<DayColumn> days, List<ShiftTableRow> rows` | `ShiftTableService` |
+| `ChatMessageView` | `Long id, String senderName, String body, LocalDateTime createdAt, String createdAtLabel, boolean mine`（`createdAtLabel`＝日時（短い）） | `ChatService` |
+| `ChatListRow` | `Long staffId, String initial, String staffName, boolean active, String lastBody, LocalDateTime lastAt, String lastAtLabel, long unreadCount`（`lastAtLabel`＝今日なら時刻、今年なら日付（短い）、それより前は日付（短い・年付き）。20-SM-10） | `ChatService` |
 | `SubmissionStatusView` | `PeriodOption period, int submitted, int total, List<String> unsubmittedNames` | `DashboardService` |
-| `ShortageView` | `Long periodId, LocalDate workDate, String slotName, int assigned, int required` | `DashboardService` |
-| `VacancyView` | `LocalDate workDate, String slotLabel, String staffName, LocalDateTime notifiedAt, int assigned, int required` | `DashboardService` |
+| `ShortageView` | `Long periodId, LocalDate workDate, String workDateLabel, String slotName, int assigned, int required`（`workDateLabel`＝日付（月日と曜日）） | `DashboardService` |
+| `VacancyView` | `LocalDate workDate, String workDateLabel, String slotLabel, String staffName, LocalDateTime notifiedAt, String notifiedAtLabel, int assigned, int required`（`workDateLabel`＝日付（月日と曜日）、`notifiedAtLabel`＝日時（短い）） | `DashboardService` |
 | `PeriodRowView` | `PeriodOption period, int submitted, int total` | `DashboardService` |
 | `DashboardView` | `List<SubmissionStatusView> submissionStatuses, List<ShortageView> shortages, int moreShortages, List<VacancyView> vacancies, List<PeriodRowView> periods` | `DashboardService` |
 | `StaffRowView` | `Long id, String name, String nameKana, String loginId, List<String> skillNames, boolean trainee, boolean active, boolean locked`（`skillNames` は職能名の順） | `StaffService` |
-| `StaffDetailView` | `Long id, LocalDateTime updatedAt, String updatedAtLabel, boolean locked, LocalDateTime lockedUntil, String lockedUntilLabel`（`lockedUntilLabel` はロック中でなければ null） | `StaffService` |
+| `StaffDetailView` | `Long id, LocalDateTime updatedAt, String updatedAtLabel, boolean locked, LocalDateTime lockedUntil, String lockedUntilLabel`（`updatedAtLabel`＝日時、`lockedUntilLabel`＝時刻。ロック中でなければ null） | `StaffService` |
 | `StaffCreatedResult` | `Long userId, String initialPassword` | `StaffService` |
 | `SkillRowView` | `Long id, String name, String description, long holderCount` | `SkillService` |
-| `RequiredDayView` | `LocalDate workDate, int dayCount, boolean dayOverridden, int eveningCount, boolean eveningOverridden` | `RequiredStaffService` |
-| `ShiftWarning` | `WarningType type, LocalDate workDate, Byte slotId, String messageCode, Object[] args` | `ShiftWarningService` |
+| `RequiredDayView` | `LocalDate workDate, String workDateLabel, int dayCount, boolean dayOverridden, int eveningCount, boolean eveningOverridden`（`workDateLabel`＝日付（月日と曜日）） | `RequiredStaffService` |
+| `ShiftWarning` | `WarningType type, LocalDate workDate, String workDateLabel, Byte slotId, String messageCode, Object[] args`（`workDateLabel`＝日付（月日と曜日）。`args` の日付も同じ文字列） | `ShiftWarningService` |
 | `MatrixCell` | `RequestMark request, String requestTitle, AssignMark assign, Long assignmentId, String confirmCode, boolean disabled` | `AssignmentService` |
 | `MatrixRow` | `Long userId, String name, boolean trainee, boolean submitted, Map<LocalDate, Map<Byte, MatrixCell>> cells` | `AssignmentService` |
 | `CountCell` | `int assigned, int required, boolean shortage, boolean traineeOnly` | `AssignmentService` |
-| `AssignmentMatrix` | `List<LocalDate> days, List<Slot> slots, List<MatrixRow> rows, Map<LocalDate, Map<Byte, CountCell>> counts` | `AssignmentService` |
-| `TimeRequestRow` | `Long userId, String name, LocalDate workDate, LocalTime startTime, LocalTime endTime, boolean assigned` | `AssignmentService` |
-| `TimeAssignmentRow` | `Long assignmentId, String name, LocalDate workDate, LocalTime startTime, LocalTime endTime, AssignmentStatus status` | `AssignmentService` |
-| `PeriodPageView` | `PeriodOption period, LocalDateTime publishedAt, List<PeriodOption> periodOptions, AssignmentMatrix matrix, List<ShiftWarning> warnings, List<TimeRequestRow> timeRequests, List<TimeAssignmentRow> timeAssignments, boolean editable, boolean publishable, String notPublishableCode` | `AssignmentService` |
+| `AssignmentMatrix` | `List<DayColumn> days, List<Slot> slots, List<MatrixRow> rows, Map<LocalDate, Map<Byte, CountCell>> counts` | `AssignmentService` |
+| `TimeRequestRow` | `Long userId, String name, LocalDate workDate, String workDateLabel, LocalTime startTime, LocalTime endTime, String timeLabel, boolean assigned`（`workDateLabel`＝日付（月日と曜日）、`timeLabel`＝時間帯） | `AssignmentService` |
+| `TimeAssignmentRow` | `Long assignmentId, String name, LocalDate workDate, String workDateLabel, LocalTime startTime, LocalTime endTime, String timeLabel, AssignmentStatus status`（同上） | `AssignmentService` |
+| `PeriodPageView` | `PeriodOption period, LocalDateTime publishedAt, String publishedAtLabel, List<PeriodOption> periodOptions, AssignmentMatrix matrix, List<ShiftWarning> warnings, List<TimeRequestRow> timeRequests, List<TimeAssignmentRow> timeAssignments, boolean editable, boolean publishable, String notPublishableCode`（`publishedAtLabel`＝日時。未公開なら null） | `AssignmentService` |
 | `PublishResult` | `int assignmentCount, boolean hasWarnings` | `AssignmentService` |
-| `AbsenceTargetRow` | `Long assignmentId, String slotLabel, String staffName, LocalDateTime registeredAt, LocalDateTime notifiedAt` | `AbsenceService` |
-| `AbsenceDayView` | `LocalDate date, List<AbsenceTargetRow> candidatesOfDay, List<AbsenceTargetRow> absentsOfDay` | `AbsenceService` |
+| `AbsenceTargetRow` | `Long assignmentId, String slotLabel, String staffName, LocalDateTime registeredAt, String registeredAtLabel, LocalDateTime notifiedAt, String notifiedAtLabel`（どちらも日時。`slotLabel` の時間指定は時間帯） | `AbsenceService` |
+| `AbsenceDayView` | `LocalDate date, String dateLabel, List<AbsenceTargetRow> candidatesOfDay, List<AbsenceTargetRow> absentsOfDay`（`dateLabel`＝日付（月日と曜日）） | `AbsenceService` |
 | `VacancyRecipientRow` | `Long userId, String name, boolean trainee` | `AbsenceService` |
-| `AbsenceConfirmView` | `Long assignmentId, LocalDate workDate, String targetLabel, List<VacancyRecipientRow> recipients, String defaultMessage` | `AbsenceService` |
-| `ManagerRow` | `Long id, String name, String loginId, boolean active, boolean locked, LocalDateTime createdAt, boolean lastActive` | `ManagerAccountService` |
+| `AbsenceConfirmView` | `Long assignmentId, LocalDate workDate, String workDateLabel, String targetLabel, List<VacancyRecipientRow> recipients, String defaultMessage`（`workDateLabel`＝日付（月日と曜日）） | `AbsenceService` |
+| `ManagerRow` | `Long id, String name, String loginId, boolean active, boolean locked, LocalDateTime createdAt, String createdAtLabel, boolean lastActive`（`createdAtLabel`＝日付（年月日）） | `ManagerAccountService` |
 | `ManagerCountView` | `long active, long stopped` | `ManagerAccountService` |
-| `OperationLogRow` | `Long id, LocalDateTime createdAt, String userName, String actionLabel, String target, String detail, String ipAddress` | `OperationLogService` |
-| `BackupRow` | `Long id, LocalDateTime createdAt, String fileName, Long fileSize, BackupStatus status, String createdByName` | `BackupService` |
+| `OperationLogRow` | `Long id, LocalDateTime createdAt, String createdAtLabel, String userName, String actionLabel, String target, String detail, String ipAddress`（`createdAtLabel`＝日時（秒まで）） | `OperationLogService` |
+| `BackupRow` | `Long id, LocalDateTime createdAt, String createdAtLabel, String fileName, Long fileSize, BackupStatus status, String createdByName`（`createdAtLabel`＝日時） | `BackupService` |
 | `BackupResult` | `BackupStatus status, String fileName` | `BackupService` |
 | `ProcessResult` | `int exitCode, boolean timedOut, String output` | `ProcessRunner` |
 

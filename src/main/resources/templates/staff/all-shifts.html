@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='all-shifts'">
+<head>
+    <title>みんなのシフト</title>
+</head>
+<body>
+    <!--
+      SB-04 みんなのシフト（20-SB-04）。
+      PC・タブレットはスタッフ×日付の表、スマホ（767px以下）は1日1枚のカード。
+      日付・曜日の文字列は table.days の DayColumn の〜Label を出す（91 5.1）。土日の色は col.date の dayOfWeek（土＝6、日＝7）で付ける。
+    -->
+    <div layout:fragment="content">
+        <h1 class="h4 mb-4">みんなのシフト</h1>
+
+        <!-- 公開済みの期間がない -->
+        <p th:if="${period == null}" th:text="#{I1401}"></p>
+
+        <th:block th:if="${period != null}">
+            <!-- 期間のプルダウン（変えたら自動で送る） -->
+            <form th:action="@{/staff/all-shifts}" method="get" class="all-shifts-period mb-3">
+                <label for="periodId" class="form-label mb-0 me-2">期間</label>
+                <select id="periodId" name="periodId" class="form-select d-inline-block w-auto" data-auto-submit>
+                    <option th:each="o : ${periodOptions}" th:value="${o.id}" th:text="${o.label}"
+                            th:selected="${o.id == period.id}"></option>
+                </select>
+            </form>
+
+            <!-- PC・タブレット：スタッフ×日付の表 -->
+            <div class="card d-none d-md-block">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="all-shifts-table">
+                            <thead>
+                                <tr>
+                                    <th class="all-shifts-name">氏名</th>
+                                    <th th:each="col : ${table.days}"
+                                        th:classappend="${col.date.dayOfWeek.value == 6} ? 'is-sat' : (${col.date.dayOfWeek.value == 7} ? 'is-sun' : '')">
+                                        <span class="d-block" th:text="${col.dateLabel}">11/1</span>
+                                        <span class="d-block" th:text="${col.dayOfWeekLabel}">日</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="row : ${table.rows}"
+                                    th:classappend="${row.userId == myUserId} ? 'all-shifts-mine'">
+                                    <th class="all-shifts-name" scope="row" th:text="${row.name}">山田 花子</th>
+                                    <td th:each="col : ${table.days}">
+                                        <th:block th:each="b : ${row.cells.get(col.date)}">
+                                            <span th:replace="~{fragments/shift-badge :: badge(${b})}"></span>
+                                        </th:block>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- スマホ：1日1枚のカード -->
+            <div class="d-md-none">
+                <div class="card mb-2 all-shifts-day" th:each="col : ${table.days}"
+                     th:with="dayNames=${table.namesOn(col.date, 'DAY')},
+                              eveningNames=${table.namesOn(col.date, 'EVENING')},
+                              timeNames=${table.namesOn(col.date, 'TIME')}">
+                    <div class="card-header fw-bold"
+                         th:classappend="${col.date.dayOfWeek.value == 6} ? 'is-sat' : (${col.date.dayOfWeek.value == 7} ? 'is-sun' : '')"
+                         th:text="${col.dateWithDayLabel}">11/1(日)</div>
+                    <div class="card-body py-2">
+                        <div th:if="${!dayNames.isEmpty()}"
+                             th:text="'☀日勤：' + ${#strings.listJoin(dayNames, '、')}">☀日勤：山田、佐藤</div>
+                        <div th:if="${!eveningNames.isEmpty()}"
+                             th:text="'☾夕勤：' + ${#strings.listJoin(eveningNames, '、')}">☾夕勤：鈴木</div>
+                        <div th:if="${!timeNames.isEmpty()}"
+                             th:text="'時間指定：' + ${#strings.listJoin(timeNames, '、')}">時間指定：田中 13-22</div>
+                        <div class="text-muted" th:if="${dayNames.isEmpty() and eveningNames.isEmpty() and timeNames.isEmpty()}">
+                            シフトなし</div>
+                    </div>
+                </div>
+            </div>
+        </th:block>
+    </div>
+</body>
+</html>
