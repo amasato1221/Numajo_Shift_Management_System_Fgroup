@@ -133,7 +133,8 @@ class StaffRequestControllerMvcTests {
 
     private static RequestPageView page() {
         PeriodOption option = new PeriodOption(1L, LocalDate.of(2099, 11, 1), LocalDate.of(2099, 11, 15),
-                LocalDateTime.of(2099, 10, 15, 23, 59), PeriodStatus.OPEN, "11/1〜11/15（期限 10/15）");
+                "11/1〜11/15", LocalDateTime.of(2099, 10, 15, 23, 59), "2099/10/15 23:59", "10/15 23:59",
+                PeriodStatus.OPEN, "11/1〜11/15（期限 10/15）");
         return new RequestPageView(option, List.of(option), "2099/10/15 23:59", true, null, null,
                 SubmissionState.NOT_SUBMITTED, "未提出", List.of(), "山田 太郎");
     }
