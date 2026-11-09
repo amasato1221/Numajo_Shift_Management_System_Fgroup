@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jp.numajo.fgroup.shift.constant.AssignmentStatus;
 import jp.numajo.fgroup.shift.constant.BadgeType;
 import jp.numajo.fgroup.shift.constant.PeriodStatus;
+import jp.numajo.fgroup.shift.dto.DayColumn;
 import jp.numajo.fgroup.shift.dto.ShiftBadge;
 import jp.numajo.fgroup.shift.dto.ShiftTable;
 import jp.numajo.fgroup.shift.dto.ShiftTableRow;
@@ -30,6 +31,7 @@ import jp.numajo.fgroup.shift.repository.ShiftAssignmentRepository;
 import jp.numajo.fgroup.shift.repository.ShiftPeriodRepository;
 import jp.numajo.fgroup.shift.repository.SlotRepository;
 import jp.numajo.fgroup.shift.repository.UserRepository;
+import jp.numajo.fgroup.shift.util.DateTimeUtil;
 import jp.numajo.fgroup.shift.util.ShiftTimeUtil;
 import lombok.RequiredArgsConstructor;
 
@@ -134,7 +136,8 @@ public class ShiftTableService {
     public Map<LocalDate, Map<Byte, Integer>> slotCounts(ShiftTable table) {
         List<Slot> slots = slotRepository.findAll(Sort.by("id"));
         Map<LocalDate, Map<Byte, Integer>> counts = new TreeMap<>();
-        for (LocalDate day : table.days()) {
+        for (DayColumn col : table.days()) {
+            LocalDate day = col.date();
             Map<Byte, Integer> perSlot = new LinkedHashMap<>();
             for (Slot s : slots) {
                 perSlot.put(s.getId(), 0);
@@ -178,7 +181,21 @@ public class ShiftTableService {
     }
 
     /** 期間の開始日から終了日までの日付。 */
-    private static List<LocalDate> daysOf(ShiftPeriod period) {
-        return period.getStartDate().datesUntil(period.getEndDate().plusDays(1)).toList();
+    private static List<DayColumn> daysOf(ShiftPeriod period) {
+        return period.getStartDate().datesUntil(period.getEndDate().plusDays(1))
+                .map(ShiftTableService::toDayColumn)
+                .toList();
+    }
+
+    /**
+     * 表の日付の列を作る（30-07 3章：見出しの文字は Service が DateTimeUtil で作る）。
+     * SM-06 の AssignmentService からも使えるように public にしている。
+     *
+     * @param date 日付
+     * @return 日付と、見出し用の〜Label（例：11/1、1、日、11/1(日)）
+     */
+    public static DayColumn toDayColumn(LocalDate date) {
+        return new DayColumn(date, DateTimeUtil.shortDate(date), DateTimeUtil.day(date),
+                DateTimeUtil.dayOfWeek(date), DateTimeUtil.shortDateWithDay(date));
     }
 }

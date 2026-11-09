@@ -24,6 +24,7 @@ import jp.numajo.fgroup.shift.exception.BusinessException;
 import jp.numajo.fgroup.shift.form.RequiredDefaultForm;
 import jp.numajo.fgroup.shift.repository.RequiredStaffDefaultRepository;
 import jp.numajo.fgroup.shift.repository.RequiredStaffOverrideRepository;
+import jp.numajo.fgroup.shift.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -76,7 +77,7 @@ public class RequiredStaffService {
         List<RequiredDayView> days = new ArrayList<>();
         for (LocalDate d = ym.atDay(1); !d.isAfter(ym.atEndOfMonth()); d = d.plusDays(1)) {
             Map<Byte, Integer> dayOverrides = overrides.getOrDefault(d, Map.of());
-            days.add(new RequiredDayView(d,
+            days.add(new RequiredDayView(d, DateTimeUtil.monthDay(d),
                     resolve(d, SlotIds.DAY, defaults, overrides), dayOverrides.containsKey(SlotIds.DAY),
                     resolve(d, SlotIds.EVENING, defaults, overrides), dayOverrides.containsKey(SlotIds.EVENING)));
         }

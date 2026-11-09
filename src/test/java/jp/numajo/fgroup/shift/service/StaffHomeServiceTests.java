@@ -70,7 +70,7 @@ class StaffHomeServiceTests {
 
     private final Slot daySlot = slot(SlotIds.DAY, "08:00", "17:00");
     private final Slot eveningSlot = slot(SlotIds.EVENING, "17:00", "22:00");
-    private final MonthCalendar calendar = new MonthCalendar(YM, List.of(), YM.minusMonths(1), YM.plusMonths(1));
+    private final MonthCalendar calendar = new MonthCalendar(YM, "", List.of(), YM.minusMonths(1), YM.plusMonths(1));
 
     private StaffHomeService service;
 
@@ -107,6 +107,8 @@ class StaffHomeServiceTests {
         assertThat(actual.workDate()).isEqualTo(LocalDate.parse("2026-10-21"));
         assertThat(actual.startTime()).isEqualTo(LocalTime.parse("08:00"));
         assertThat(actual.endTime()).isEqualTo(LocalTime.parse("17:00"));
+        assertThat(actual.workDateLabel()).isEqualTo("10月21日(水)");
+        assertThat(actual.timeLabel()).isEqualTo("8:00〜17:00");
         assertThat(actual.badge().type()).isEqualTo(BadgeType.DAY);
         assertThat(actual.badge().icons()).isEqualTo("☀");
         assertThat(actual.badge().timeText()).isNull();
@@ -131,6 +133,8 @@ class StaffHomeServiceTests {
         assertThat(actual.badge().type()).isEqualTo(BadgeType.TIME);
         assertThat(actual.badge().icons()).isEqualTo("☀☾");
         assertThat(actual.badge().timeText()).isEqualTo("13-22");
+        assertThat(actual.workDateLabel()).isEqualTo("10月23日(金)");
+        assertThat(actual.timeLabel()).isEqualTo("13:00〜22:00");
     }
 
     // ---------------------------------------------------------------- 未提出の期間
@@ -151,6 +155,8 @@ class StaffHomeServiceTests {
         assertThat(actual).extracting(PeriodOption::id).containsExactly(3L, 4L);
         assertThat(actual.get(0).label()).isEqualTo("11/1〜11/15（期限 10/15）");
         assertThat(actual.get(0).deadlineAt()).isEqualTo(LocalDateTime.parse("2026-10-15T23:59:59"));
+        assertThat(actual.get(0).periodLabel()).isEqualTo("11/1〜11/15");
+        assertThat(actual.get(0).deadlineShortLabel()).isEqualTo("10/15 23:59");
     }
 
     // ---------------------------------------------------------------- お知らせ・カレンダー
@@ -158,7 +164,7 @@ class StaffHomeServiceTests {
     @Test
     void お知らせとカレンダー_受け取ったものをそのまま入れる() {
         List<NoticeRow> notices = List.of(new NoticeRow(1L, NotificationType.CHAT, "チャット", "件名", "本文",
-                NOW, true));
+                NOW, "", true));
         when(notificationService.findUnreadTop3(USER_ID)).thenReturn(notices);
 
         StaffHomeView actual = service.getHome(USER_ID, YM);

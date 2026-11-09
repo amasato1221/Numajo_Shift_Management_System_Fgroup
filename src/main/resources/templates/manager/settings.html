@@ -25,8 +25,7 @@
                 <div class="form-text">OFF にすると、バイトは自分のシフトだけ見られます。</div>
             </div>
             <button type="submit" class="btn btn-success">保存</button>
-            <div class="text-muted small mt-3"
-                 th:text="|最終更新 ${#temporals.format(setting.updatedAt, 'yyyy/MM/dd HH:mm')}|"></div>
+            <div class="text-muted small mt-3" th:text="|最終更新 ${updatedAtLabel}|"></div>
         </form>
     </main>
 </body>

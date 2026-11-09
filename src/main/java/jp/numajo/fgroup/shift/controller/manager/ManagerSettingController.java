@@ -15,6 +15,7 @@ import jp.numajo.fgroup.shift.entity.StoreSetting;
 import jp.numajo.fgroup.shift.form.StoreSettingForm;
 import jp.numajo.fgroup.shift.security.LoginUser;
 import jp.numajo.fgroup.shift.service.StoreSettingService;
+import jp.numajo.fgroup.shift.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -35,22 +36,29 @@ public class ManagerSettingController {
         form.setStoreName(setting.getStoreName());
         form.setShowOthersShifts(setting.isShowOthersShifts());
         model.addAttribute("storeSettingForm", form);
-        model.addAttribute("setting", setting);
+        addSetting(model, setting);
         return "manager/settings";
     }
 
-    /** 保存（20-SM-09 2.2）。入力エラーなら最終更新の表示用に setting を入れ直して再表示する。 */
+    /** 保存（20-SM-09 2.2）。入力エラーなら最終更新の表示用に setting・updatedAtLabel を入れ直して再表示する。 */
     @PostMapping
     public String save(@Validated @ModelAttribute("storeSettingForm") StoreSettingForm form,
                        BindingResult bindingResult,
                        @AuthenticationPrincipal LoginUser loginUser,
                        Model model, RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            model.addAttribute("setting", storeSettingService.get());
+            addSetting(model, storeSettingService.get());
             return "manager/settings";
         }
         storeSettingService.update(form.getStoreName(), form.isShowOthersShifts(), loginUser.getUserId());
         redirectAttributes.addFlashAttribute("successMessage", "I2901");
         return "redirect:/manager/settings";
+    }
+
+    /** 店舗設定と、最終更新の表示（日時。updatedAt が null なら null）を model に入れる（20-SM-09 1章 No.5）。 */
+    private void addSetting(Model model, StoreSetting setting) {
+        model.addAttribute("setting", setting);
+        model.addAttribute("updatedAtLabel",
+                setting.getUpdatedAt() == null ? null : DateTimeUtil.dateTime(setting.getUpdatedAt()));
     }
 }

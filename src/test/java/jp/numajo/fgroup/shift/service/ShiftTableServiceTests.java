@@ -26,6 +26,7 @@ import jp.numajo.fgroup.shift.constant.BadgeType;
 import jp.numajo.fgroup.shift.constant.PeriodStatus;
 import jp.numajo.fgroup.shift.constant.Role;
 import jp.numajo.fgroup.shift.constant.SlotIds;
+import jp.numajo.fgroup.shift.dto.DayColumn;
 import jp.numajo.fgroup.shift.dto.ShiftBadge;
 import jp.numajo.fgroup.shift.dto.ShiftTable;
 import jp.numajo.fgroup.shift.dto.ShiftTableRow;
@@ -258,7 +259,13 @@ class ShiftTableServiceTests {
 
         ShiftTable table = service.build(period, false);
 
-        assertThat(table.days()).containsExactly(d("2026-11-01"), d("2026-11-02"), d("2026-11-03"));
+        assertThat(table.days()).extracting(DayColumn::date)
+                .containsExactly(d("2026-11-01"), d("2026-11-02"), d("2026-11-03"));
+        // 見出しの〜Label（30-07 3章）：日付（短い）・日だけ・曜日だけ・月日と曜日（短い）
+        assertThat(table.days().get(0))
+                .isEqualTo(new DayColumn(d("2026-11-01"), "11/1", "1", "日", "11/1(日)"));
+        assertThat(table.days().get(2))
+                .isEqualTo(new DayColumn(d("2026-11-03"), "11/3", "3", "火", "11/3(火)"));
         ShiftTableRow row = table.rows().get(0);
         assertThat(row.name()).isEqualTo("氏名1");
         assertThat(row.trainee()).isTrue();
@@ -340,12 +347,10 @@ class ShiftTableServiceTests {
     }
 
     @Test
-    void 日付の表示_見出しの日付と曜日とカードの見出し() {
-        ShiftTable table = table();
-
-        assertThat(table.dateLabel(d("2026-11-01"))).isEqualTo("11/1");
-        assertThat(table.dayOfWeekLabel(d("2026-11-01"))).isEqualTo("日");
-        assertThat(table.cardLabel(d("2026-11-01"))).isEqualTo("11/1(日)");
+    void 日付の列_2桁の月日と土曜() {
+        // 月・日が2桁の日、土曜（列の見出しの形が1桁の日と同じ決まりで作られること）
+        assertThat(ShiftTableService.toDayColumn(d("2026-12-26")))
+                .isEqualTo(new DayColumn(d("2026-12-26"), "12/26", "26", "土", "12/26(土)"));
     }
 
     // ---------------------------------------------------------------- 期間の選択肢・表示する期間
@@ -466,7 +471,8 @@ class ShiftTableServiceTests {
     }
 
     private ShiftTable table(ShiftTableRow... rows) {
-        return new ShiftTable(List.of(d("2026-11-01"), d("2026-11-02"), d("2026-11-03")),
+        return new ShiftTable(List.of(ShiftTableService.toDayColumn(d("2026-11-01")),
+                ShiftTableService.toDayColumn(d("2026-11-02")), ShiftTableService.toDayColumn(d("2026-11-03"))),
                 new ArrayList<>(Arrays.asList(rows)));
     }
 
