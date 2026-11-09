@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-05 |
-| 版 | 第1.5版（令和8年11月6日） |
+| 版 | 第1.6版（令和8年11月9日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -16,6 +16,7 @@
 | 1.3 | 令和8年11月3日 | 実装中の質問（川端）を反映：PeriodService の findOptionsForStaff・findOptionsForManager の表示名と、resolveDefault・defaultPeriodForManager が null を返すときを書いた | 新井 |
 | 1.4 | 令和8年11月5日 | 0章の「メッセージの文」の決まりに、期間の表示名・状態名・ICS の件名など短い表示用の文字は Service に書いてよいことを足した（3.5 の表示名との食い違いを直した） | 新井 |
 | 1.5 | 令和8年11月6日 | SB-01 の実装（PR #49）に合わせた：1.2 に NotificationService#toRow を足し、2.1 StaffHomeService の依存に SlotRepository を足した | 新井 |
+| 1.6 | 令和8年11月9日 | 0章に「日付の表示」の決まりを足した（10_基本設計書 5.3 第1.4版）。toOption で periodLabel・deadlineLabel・deadlineShortLabel も入れることを書いた | 新井 |
 
 ## 0. service の決まり
 
@@ -28,6 +29,7 @@
 | 操作ログ | 94_セキュリティ設計書 4章の操作は、業務処理の最後に `operationLogService.record(...)` を呼ぶ（同じトランザクション） |
 | お知らせ | 作るのは `NotificationService` だけ。ほかの Service はそのメソッドを呼ぶ |
 | 日時 | `Clock clock` を受け取り、`LocalDateTime.now(clock)` |
+| 日付の表示 | dto を作るとき、日付型の項目のすぐ後ろの `〜Label` に `DateTimeUtil` で作った文字を入れる（30-07 3章、10_基本設計書 5.3）。お知らせ・メッセージの引数の日付も `DateTimeUtil` で作る。`DateTimeFormatter` を Service に直接書かない |
 | メッセージの文 | Service の中で文を組み立てるとき（お知らせの本文など）は `MessageSource#getMessage(コード, 引数, Locale.JAPAN)` を使い、日本語を直接書かない |
 | 表示用の短い文字 | 上の決まりは「文」（93_メッセージ一覧にある、お知らせ・アラートなどに出す文）が対象。選択肢の表示名（3.5 の「11/1〜11/15（期限 10/15）」）、enum の `label`（「作成中」など）、ICS の件名・カレンダー名（20-IC-01 3章の「日勤 8:00-17:00」「シフト（{氏名}）」）のように、設計書に形が決めてある短い表示用の文字は、Service や enum に直接書いてよい |
 
@@ -215,7 +217,7 @@
 | `int createUpcomingPeriods(LocalDate today)` | 更新 | BT-01（95_通知・定期処理設計書 2章）。戻り値は作った数 |
 | `int closeExpiredPeriods(LocalDateTime now)` | 更新 | BT-02（95_通知・定期処理設計書 3章）。戻り値は締めた数 |
 | `static LocalDateTime deadlineOf(LocalDate startDate)` | － | 10_基本設計書 6.1 の期限の決め方 |
-| `static PeriodOption toOption(ShiftPeriod p)` | － | 表示名「11/1〜11/15（期限 10/15）」を入れる（上の2つ以外の画面で使う形） |
+| `static PeriodOption toOption(ShiftPeriod p)` | － | 表示名「11/1〜11/15（期限 10/15）」を入れる（上の2つ以外の画面で使う形）。`periodLabel`（`DateTimeUtil.period`）・`deadlineLabel`（`dateTime`）・`deadlineShortLabel`（`shortDateTime`）もここで入れる（上の2つも `toOption` を通して作る） |
 
 ### 3.6 `AssignmentService`
 
