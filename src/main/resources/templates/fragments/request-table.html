@@ -73,7 +73,7 @@
                     </div>
                     <div class="d-flex align-items-center gap-1">
                         <select class="form-select form-select-sm" th:name="|days[${stat.index}].startTime|"
-                                th:classappend="${!isTime} ? 'd-none'" th:disabled="${!editable}" data-time-select>
+                                th:hidden="${!isTime}" th:disabled="${!editable}" data-time-select>
                             <option value="">--</option>
                             <option th:each="o : ${timeOptions}" th:value="${o.value}"
                                     th:text="${o.label}"
@@ -81,7 +81,7 @@
                                                    and o.value == d.startTime.toString()}">8:00</option>
                         </select>
                         <select class="form-select form-select-sm" th:name="|days[${stat.index}].endTime|"
-                                th:classappend="${!isTime} ? 'd-none'" th:disabled="${!editable}" data-time-select>
+                                th:hidden="${!isTime}" th:disabled="${!editable}" data-time-select>
                             <option value="">--</option>
                             <option th:each="o : ${timeOptions}" th:value="${o.value}"
                                     th:text="${o.label}"

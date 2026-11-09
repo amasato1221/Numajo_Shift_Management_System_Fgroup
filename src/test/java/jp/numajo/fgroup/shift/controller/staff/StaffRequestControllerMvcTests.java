@@ -167,6 +167,47 @@ class StaffRequestControllerMvcTests {
     }
 
     @Test
+    void 提出画面_時刻のプルダウンは枠ごとの日だけ隠れ_d_noneで固定しない() throws Exception {
+        RequestPageView base = page();
+        RequestPageView withDays = new RequestPageView(base.period(), base.periodOptions(), base.deadlineLabel(),
+                true, null, null, SubmissionState.NOT_SUBMITTED, "未提出",
+                List.of(new jp.numajo.fgroup.shift.dto.RequestDayRow(LocalDate.of(2099, 11, 1), "11月1日(日)", true, true),
+                        new jp.numajo.fgroup.shift.dto.RequestDayRow(LocalDate.of(2099, 11, 2), "11月2日(月)", true, true)),
+                "山田 太郎");
+        jp.numajo.fgroup.shift.form.DayRequestForm slot = new jp.numajo.fgroup.shift.form.DayRequestForm();
+        slot.setWorkDate(LocalDate.of(2099, 11, 1));
+        slot.setMode(jp.numajo.fgroup.shift.constant.RequestMode.SLOT);
+        jp.numajo.fgroup.shift.form.DayRequestForm time = new jp.numajo.fgroup.shift.form.DayRequestForm();
+        time.setWorkDate(LocalDate.of(2099, 11, 2));
+        time.setMode(jp.numajo.fgroup.shift.constant.RequestMode.TIME);
+        ShiftRequestForm form = new ShiftRequestForm();
+        form.setPeriodId(1L);
+        form.setDays(new java.util.ArrayList<>(List.of(slot, time)));
+        when(periodService.getPeriod(1L)).thenReturn(new ShiftPeriod());
+        when(shiftRequestService.toForm(any(), any())).thenReturn(form);
+        when(shiftRequestService.getRequestPage(staffId, null)).thenReturn(withDays);
+
+        String html = mvc.perform(get("/staff/requests").with(login(staff)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // JS は hidden 属性を切り替える。d-none が付いていると、時間指定にしても出てこない
+        org.assertj.core.api.Assertions.assertThat(html).doesNotContain("d-none\" data-time-select")
+                .doesNotContain("form-select-sm d-none");
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("<select[^>]*data-time-select[^>]*>").matcher(html);
+        java.util.List<String> selects = new java.util.ArrayList<>();
+        while (m.find()) {
+            selects.add(m.group());
+        }
+        // 1日あたり開始・終了の2つ。1日目（枠ごと）は隠し、2日目（時間指定）は出す
+        org.assertj.core.api.Assertions.assertThat(selects).hasSize(4);
+        org.assertj.core.api.Assertions.assertThat(selects.get(0)).contains("hidden");
+        org.assertj.core.api.Assertions.assertThat(selects.get(1)).contains("hidden");
+        org.assertj.core.api.Assertions.assertThat(selects.get(2)).doesNotContain("hidden");
+        org.assertj.core.api.Assertions.assertThat(selects.get(3)).doesNotContain("hidden");
+    }
+
+    @Test
     void 提出画面_受付中の期間がなければpageなしで表示する() throws Exception {
         when(shiftRequestService.getRequestPage(staffId, null)).thenReturn(null);
 
