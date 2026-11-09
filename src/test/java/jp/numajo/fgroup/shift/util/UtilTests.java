@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import jp.numajo.fgroup.shift.dto.SelectOption;
+
 /**
  * util パッケージの単体テスト（30-08 0章、97_テスト計画書 3.2）。
  *
@@ -75,6 +77,16 @@ class UtilTests {
         assertThat(actual.get(0)).isEqualTo(LocalTime.of(8, 0));
         assertThat(actual.get(1)).isEqualTo(LocalTime.of(8, 30));
         assertThat(actual.get(28)).isEqualTo(LocalTime.of(22, 0));
+    }
+
+    @Test
+    void timeSelectOptions_値はHH_mmで表示はH_mmの29個() {
+        List<SelectOption> actual = ShiftTimeUtil.timeSelectOptions();
+
+        assertThat(actual).hasSize(29);
+        assertThat(actual.get(0)).isEqualTo(new SelectOption("08:00", "8:00"));
+        assertThat(actual.get(1)).isEqualTo(new SelectOption("08:30", "8:30"));
+        assertThat(actual.get(28)).isEqualTo(new SelectOption("22:00", "22:00"));
     }
 
     @ParameterizedTest(name = "No.1 {0} は刻みの上")

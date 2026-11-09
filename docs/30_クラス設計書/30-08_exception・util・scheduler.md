@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-08 |
-| 版 | 第1.3版（令和8年11月9日） |
+| 版 | 第1.4版（令和8年11月9日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -14,6 +14,7 @@
 | 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：DateTimeUtil に5つの形式を追加（L4）。GlobalExceptionHandler で必須パラメーターの欠落・HTTPメソッド違いも404にした（L13）。どちらも単体テストで命令・分岐とも100%を確認 | 新井 |
 | 1.2 | 令和8年11月3日 | 実装中の質問（川端）を反映：scheduler の2クラスに `@Profile("!test")` を付け、テストの中で定期処理が動かないようにした。scheduler のテストを Spring を起動しない単体テストにした | 新井 |
 | 1.3 | 令和8年11月9日 | 日付の表示の統一（10_基本設計書 5.3 第1.4版）：DateTimeUtil に `timeRange`・`shortDateWithDay`・`yearMonth`・`day`・`dayOfWeek` を追加（`shortDateWithDay`・`dayOfWeek` は PR #53 で実装済みのものを設計書に反映） | 新井 |
+| 1.4 | 令和8年11月9日 | PR #54・#57 の確認を反映：ShiftTimeUtil に時刻プルダウンに出す選択肢 `timeSelectOptions()`（`SelectOption` のリスト）を足した（テンプレートで時刻の文字を組み立てないため。91 5.1） | 新井 |
 
 このページの exception と util のコードは**全文**です（scheduler は 4章の形で書きます）。そのまま写してください（30-00 1章）。
 
@@ -140,9 +141,12 @@ public class GlobalExceptionHandler {
 package jp.numajo.fgroup.shift.util;
 
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import jp.numajo.fgroup.shift.dto.SelectOption;
 
 /**
  * シフトの時刻に関する共通処理。
@@ -156,14 +160,21 @@ public final class ShiftTimeUtil {
     /** 時刻の刻み（分） */
     public static final int STEP_MINUTES = 30;
 
+    /** プルダウンで送る値の形（例：08:00）。フォームの @DateTimeFormat(pattern = "HH:mm") に合わせる */
+    private static final DateTimeFormatter VALUE_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
+
     private static final List<LocalTime> TIME_OPTIONS;
+    private static final List<SelectOption> TIME_SELECT_OPTIONS;
 
     static {
         List<LocalTime> list = new ArrayList<>();
+        List<SelectOption> selectOptions = new ArrayList<>();
         for (LocalTime t = MIN_TIME; !t.isAfter(MAX_TIME); t = t.plusMinutes(STEP_MINUTES)) {
             list.add(t);
+            selectOptions.add(new SelectOption(t.format(VALUE_FORMAT), DateTimeUtil.time(t)));
         }
         TIME_OPTIONS = Collections.unmodifiableList(list);
+        TIME_SELECT_OPTIONS = Collections.unmodifiableList(selectOptions);
     }
 
     private ShiftTimeUtil() {
@@ -172,6 +183,14 @@ public final class ShiftTimeUtil {
     /** 時刻プルダウンの選択肢（8:00〜22:00 の30分刻み、29個）。 */
     public static List<LocalTime> timeOptions() {
         return TIME_OPTIONS;
+    }
+
+    /**
+     * 時刻プルダウンに出す選択肢（8:00〜22:00 の30分刻み、29個）。value は「08:00」、label は「8:00」。
+     * テンプレートは value と label を出すだけにする（91_コーディング規約 5.1 の日付の表示）。
+     */
+    public static List<SelectOption> timeSelectOptions() {
+        return TIME_SELECT_OPTIONS;
     }
 
     /** 8:00〜22:00 の範囲で、分が 0 か 30、秒が 0 なら true。null は false。 */
