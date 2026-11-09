@@ -52,7 +52,7 @@ public class StaffRequestController {
 
         model.addAttribute("page", page);
         model.addAttribute("shiftRequestForm", form);
-        model.addAttribute("timeOptions", ShiftTimeUtil.timeOptions());
+        model.addAttribute("timeOptions", ShiftTimeUtil.timeSelectOptions());
         return VIEW;
     }
 
@@ -73,7 +73,7 @@ public class StaffRequestController {
         if (bindingResult.hasErrors()) {
             // 送られたフォームのまま、画面の表示に必要な値だけを入れ直す
             model.addAttribute("page", shiftRequestService.getRequestPage(loginUser.getUserId(), form.getPeriodId()));
-            model.addAttribute("timeOptions", ShiftTimeUtil.timeOptions());
+            model.addAttribute("timeOptions", ShiftTimeUtil.timeSelectOptions());
             return VIEW;
         }
         try {

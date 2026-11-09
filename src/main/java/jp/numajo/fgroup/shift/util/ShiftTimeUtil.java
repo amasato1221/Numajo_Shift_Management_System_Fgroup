@@ -1,9 +1,12 @@
 package jp.numajo.fgroup.shift.util;
 
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import jp.numajo.fgroup.shift.dto.SelectOption;
 
 /**
  * シフトの時刻に関する共通処理。
@@ -18,6 +21,7 @@ public final class ShiftTimeUtil {
     public static final int STEP_MINUTES = 30;
 
     private static final List<LocalTime> TIME_OPTIONS;
+    private static final List<SelectOption> TIME_SELECT_OPTIONS;
 
     static {
         List<LocalTime> list = new ArrayList<>();
@@ -25,6 +29,9 @@ public final class ShiftTimeUtil {
             list.add(t);
         }
         TIME_OPTIONS = Collections.unmodifiableList(list);
+        TIME_SELECT_OPTIONS = list.stream()
+                .map(t -> new SelectOption(t.format(DateTimeFormatter.ofPattern("HH:mm")), DateTimeUtil.time(t)))
+                .toList();
     }
 
     private ShiftTimeUtil() {
@@ -33,6 +40,11 @@ public final class ShiftTimeUtil {
     /** 時刻プルダウンの選択肢（8:00〜22:00 の30分刻み、29個）。 */
     public static List<LocalTime> timeOptions() {
         return TIME_OPTIONS;
+    }
+
+    /** 時刻プルダウンの選択肢（値は HH:mm、表示は H:mm）。 */
+    public static List<SelectOption> timeSelectOptions() {
+        return TIME_SELECT_OPTIONS;
     }
 
     /** 8:00〜22:00 の範囲で、分が 0 か 30、秒が 0 なら true。null は false。 */
