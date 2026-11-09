@@ -128,6 +128,20 @@ class StaffRequestControllerTests {
         assertThat(actual).isEqualTo("staff/requests");
         assertThat(model.getAttribute("page")).isSameAs(page);
         assertThat((List<?>) model.getAttribute("timeOptions")).hasSize(29);
+        assertThat(model.getAttribute("errorMessage")).isEqualTo("E1301");
+        verify(shiftRequestService, never()).submit(any(), any());
+    }
+
+    @Test
+    void submit_期間以外の入力エラーならE1302を画面に出す() {
+        when(loginUser.getUserId()).thenReturn(USER_ID);
+        when(shiftRequestService.getRequestPage(USER_ID, 1L)).thenReturn(page());
+        bindingResult.rejectValue("days", "E1302");
+
+        String actual = controller.submit(form, bindingResult, loginUser, model, redirectAttributes);
+
+        assertThat(actual).isEqualTo("staff/requests");
+        assertThat(model.getAttribute("errorMessage")).isEqualTo("E1302");
         verify(shiftRequestService, never()).submit(any(), any());
     }
 

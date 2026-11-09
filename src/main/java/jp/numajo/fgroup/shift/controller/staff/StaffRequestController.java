@@ -74,6 +74,8 @@ public class StaffRequestController {
             // 送られたフォームのまま、画面の表示に必要な値だけを入れ直す
             model.addAttribute("page", shiftRequestService.getRequestPage(loginUser.getUserId(), form.getPeriodId()));
             model.addAttribute("timeOptions", ShiftTimeUtil.timeSelectOptions());
+            // 期間の指定が不正なら E1301、それ以外は E1302（どちらも改ざんのときだけ起きる）
+            model.addAttribute("errorMessage", bindingResult.hasFieldErrors("periodId") ? "E1301" : "E1302");
             return VIEW;
         }
         try {
