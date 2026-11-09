@@ -9,6 +9,7 @@
 <body>
 <!--
   SM-06 シフト作成（希望一覧・割当・公開）（20-SM-06）。
+  スマホでは割当を見るだけにする（I2604）：セルは CSS で押せなくし、時間指定の割当のフォーム・ボタンと「公開する」は d-none d-md-* で隠す。
   割当表のセルは、表全体を囲む1つのフォームのボタン（name="cell"、値は「ユーザーID:日付:枠ID」）。
   日付・時刻の文字は〜Label をそのまま出す（91 5.1）。送る値（セルのボタン・hidden・プルダウン）は日付型・時刻型をそのまま書く。
 -->
@@ -34,7 +35,7 @@
             <a class="btn btn-outline-secondary" target="_blank" rel="noopener"
                th:href="@{/manager/periods/{id}/print(id=${page.period.id})}">印刷</a>
             <form th:unless="${page.period.status.name() == 'PUBLISHED'}" method="post"
-                  th:action="@{/manager/periods/{id}/publish(id=${page.period.id})}" class="d-flex align-items-center">
+                  th:action="@{/manager/periods/{id}/publish(id=${page.period.id})}" class="d-none d-md-flex align-items-center">
                 <button type="submit" class="btn btn-primary" th:disabled="${!page.publishable}"
                         th:data-confirm="#{C2601}">公開する</button>
                 <span class="text-danger small ms-2" th:if="${page.notPublishableCode != null}"
@@ -47,7 +48,7 @@
     <div class="alert alert-info" role="alert" th:if="${page.period.status.name() == 'OPEN'}" th:text="#{I2601}"></div>
     <div class="alert alert-info" role="alert" th:if="${page.period.status.name() == 'PUBLISHED'}"
          th:text="#{I2602}"></div>
-    <p class="text-muted small d-md-none" th:text="#{I2604}">シフトの割当はPCで操作してください。</p>
+    <div class="alert alert-warning d-md-none" role="alert" th:text="#{I2604}">シフトの割当はPCで操作してください。</div>
 
     <!-- 割当表 -->
     <form method="post" th:action="@{/manager/periods/{id}/assignments/toggle(id=${page.period.id})}">
@@ -169,7 +170,7 @@
                 <td th:text="${r.timeLabel}">13:00〜22:00</td>
                 <td>
                     <span th:if="${r.assigned}">割当済み</span>
-                    <form th:if="${!r.assigned and page.editable}" method="post"
+                    <form th:if="${!r.assigned and page.editable}" method="post" class="d-none d-md-block"
                           th:action="@{/manager/periods/{id}/assignments/time(id=${page.period.id})}">
                         <input type="hidden" name="userId" th:value="${r.userId}">
                         <input type="hidden" name="workDate" th:value="${r.workDate}">
@@ -185,8 +186,8 @@
 
     <!-- 時間指定で割り当てる -->
     <th:block th:if="${page.editable}">
-        <h2 class="h5">時間指定で割り当てる</h2>
-        <form method="post" class="row g-2 mb-4" th:object="${timeAssignmentForm}"
+        <h2 class="h5 d-none d-md-block">時間指定で割り当てる</h2>
+        <form method="post" class="row g-2 mb-4 d-none d-md-flex" th:object="${timeAssignmentForm}"
               th:action="@{/manager/periods/{id}/assignments/time(id=${page.period.id})}">
             <div class="col-12 col-md-3">
                 <label for="timeUserId" class="form-label">スタッフ</label>
@@ -250,7 +251,7 @@
                 </td>
                 <td th:if="${a.status.name() == 'ASSIGNED' and page.editable}">
                     <div class="d-flex gap-2">
-                        <form method="post"
+                        <form method="post" class="d-none d-md-block"
                               th:action="@{/manager/periods/{id}/assignments/{aid}/delete(id=${page.period.id},aid=${a.assignmentId})}">
                             <button type="submit" class="btn btn-sm btn-outline-danger"
                                     th:attr="data-confirm=${page.period.status.name() == 'PUBLISHED'} ? #{C2604} : null">外す</button>

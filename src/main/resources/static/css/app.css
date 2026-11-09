@@ -612,6 +612,14 @@ body {
     font-size: 0.65rem;
 }
 
+/* スマホでは割当表を見るだけにする（20-SM-06 3.2「画面の大きさ」。I2604 の案内を出す） */
+@media (max-width: 767.98px) {
+    .assign-cell-btn,
+    .assign-absent-link {
+        pointer-events: none;
+    }
+}
+
 /* 最下行：不足は赤字、研修中のみは黄の背景、足りていれば緑字 */
 .assign-table .assign-count {
     font-weight: bold;
