@@ -12,5 +12,6 @@ import java.util.List;
  * @param prevYm 前の月（〈 のリンク）
  * @param nextYm 次の月（〉 のリンク）
  */
-public record MonthCalendar(YearMonth ym, String ymLabel, List<List<CalendarDay>> weeks, YearMonth prevYm, YearMonth nextYm) {
+public record MonthCalendar(YearMonth ym, String ymLabel, List<List<CalendarDay>> weeks, YearMonth prevYm,
+        YearMonth nextYm) {
 }

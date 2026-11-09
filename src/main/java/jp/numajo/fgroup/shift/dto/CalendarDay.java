@@ -13,5 +13,6 @@ import java.util.List;
  * @param badges   その日のバッジ（開始時刻の順）
  * @param periodId その日を含む募集期間のID。なければ null
  */
-public record CalendarDay(LocalDate date, String dayLabel, boolean inMonth, boolean today, List<ShiftBadge> badges, Long periodId) {
+public record CalendarDay(LocalDate date, String dayLabel, boolean inMonth, boolean today, List<ShiftBadge> badges,
+        Long periodId) {
 }

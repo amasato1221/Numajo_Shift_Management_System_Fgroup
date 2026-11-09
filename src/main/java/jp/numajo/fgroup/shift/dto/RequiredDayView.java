@@ -12,6 +12,6 @@ import java.time.LocalDate;
  * @param eveningCount      夕勤の必要人数
  * @param eveningOverridden 夕勤が上書きの値か
  */
-public record RequiredDayView(LocalDate workDate, String workDateLabel, int dayCount, boolean dayOverridden, int eveningCount,
-        boolean eveningOverridden) {
+public record RequiredDayView(LocalDate workDate, String workDateLabel, int dayCount, boolean dayOverridden,
+        int eveningCount, boolean eveningOverridden) {
 }
