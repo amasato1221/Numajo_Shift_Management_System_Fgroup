@@ -37,7 +37,7 @@ import jp.numajo.fgroup.shift.service.StaffService;
  * ManagerStaffController（SM-03：スタッフ登録・編集）のテスト。
  *
  * <p>
- * 行き先とフラッシュの値、エラーの項目を確かめる。URL・権限・CSRF は ManagerStaffControllerMvcTests で見る。
+ * 行き先とフラッシュの値、エラーの項目を確かめる。URL は ManagerStaffControllerMvcTests、画面の描画・権限・CSRF は ManagerStaffFlowTests で見る。
  * </p>
  *
  * <table>
