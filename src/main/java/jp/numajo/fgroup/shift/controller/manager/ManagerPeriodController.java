@@ -1,6 +1,8 @@
 package jp.numajo.fgroup.shift.controller.manager;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +24,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.ConstraintViolation;
+import jp.numajo.fgroup.shift.constant.PeriodStatus;
+import jp.numajo.fgroup.shift.constant.SlotIds;
 import jp.numajo.fgroup.shift.dto.PublishResult;
+import jp.numajo.fgroup.shift.dto.ShiftTable;
 import jp.numajo.fgroup.shift.entity.ShiftPeriod;
 import jp.numajo.fgroup.shift.exception.BusinessException;
 import jp.numajo.fgroup.shift.form.AssignmentToggleForm;
@@ -30,6 +35,9 @@ import jp.numajo.fgroup.shift.form.TimeAssignmentForm;
 import jp.numajo.fgroup.shift.security.LoginUser;
 import jp.numajo.fgroup.shift.service.AssignmentService;
 import jp.numajo.fgroup.shift.service.PeriodService;
+import jp.numajo.fgroup.shift.service.RequiredStaffService;
+import jp.numajo.fgroup.shift.service.ShiftTableService;
+import jp.numajo.fgroup.shift.util.DateTimeUtil;
 import jp.numajo.fgroup.shift.util.ShiftTimeUtil;
 import lombok.RequiredArgsConstructor;
 
@@ -37,7 +45,7 @@ import lombok.RequiredArgsConstructor;
  * シフト作成（SM-06：希望一覧・割当・公開）。20-SM-06。
  *
  * <p>
- * 希望の代理修正（SM-06-1）と印刷用シフト表（SM-08）は、同じ URL（/manager/periods）の下に、あとからこのクラスへ足す。
+ * 印刷用シフト表（SM-08）も、同じ URL（/manager/periods）の下にある。希望の代理修正（SM-06-1）は、あとからこのクラスへ足す。
  * </p>
  */
 @Controller
@@ -60,6 +68,9 @@ public class ManagerPeriodController {
 
     private final PeriodService periodService;
     private final AssignmentService assignmentService;
+    private final ShiftTableService shiftTableService;
+    private final RequiredStaffService requiredStaffService;
+    private final Clock clock;
 
     /**
      * 期間を選ばずに開いたとき、表示する期間へ移る（20-SM-06 3.1）。
@@ -199,6 +210,29 @@ public class ManagerPeriodController {
             throw new BusinessException("E2601");
         }
         return matcher;
+    }
+
+    /**
+     * 印刷用シフト表（20-SM-08）。公開済みでなければ「下書き」の透かしを出す。
+     *
+     * @param id    期間ID
+     * @param model 画面に渡す値
+     * @return 印刷用の画面
+     */
+    @GetMapping("/{id}/print")
+    public String print(@PathVariable Long id, Model model) {
+        ShiftPeriod period = periodService.getPeriod(id);
+        ShiftTable table = shiftTableService.build(period, true);
+        model.addAttribute("period", period);
+        model.addAttribute("periodLabel", DateTimeUtil.printPeriod(period.getStartDate(), period.getEndDate()));
+        model.addAttribute("published", period.getStatus() == PeriodStatus.PUBLISHED);
+        model.addAttribute("table", table);
+        model.addAttribute("required", requiredStaffService.requiredCounts(period.getStartDate(), period.getEndDate()));
+        model.addAttribute("counts", shiftTableService.slotCounts(table));
+        model.addAttribute("daySlotId", SlotIds.DAY);
+        model.addAttribute("eveningSlotId", SlotIds.EVENING);
+        model.addAttribute("printedAtLabel", DateTimeUtil.dateTime(LocalDateTime.now(clock)));
+        return "manager/print";
     }
 
     /** 業務のエラーを、リダイレクト先で出すエラーにする。 */

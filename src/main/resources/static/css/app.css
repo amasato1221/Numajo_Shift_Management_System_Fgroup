@@ -648,6 +648,118 @@ body {
 /* ===== SM-07 欠勤登録（川端） ===== */
 
 /* ===== SM-08 印刷用シフト表（栗原） ===== */
+/* 印刷の形：A4横。9pt、行の高さ6mm（20-SM-08 1章） */
+@page {
+    size: A4 landscape;
+    margin: 10mm;
+}
+
+.print-sheet {
+    padding: 8px 12px;
+    font-size: 9pt;
+    color: #000000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.print-actions {
+    margin-bottom: 8px;
+}
+
+.print-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+}
+
+.print-title {
+    margin: 0;
+    font-size: 12pt;
+    font-weight: bold;
+}
+
+.print-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.print-table thead {
+    display: table-header-group;
+}
+
+.print-table tr {
+    page-break-inside: avoid;
+}
+
+.print-table th,
+.print-table td {
+    height: 6mm;
+    padding: 0 1px;
+    border: 1px solid #000000;
+    text-align: center;
+    vertical-align: middle;
+    font-weight: normal;
+    line-height: 1.2;
+    overflow: hidden;
+}
+
+.print-table thead th {
+    background-color: #EEEEEE;
+}
+
+.print-table .print-name {
+    width: 80px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.print-table .print-days {
+    width: 36px;
+}
+
+.print-table .is-sat {
+    color: #0D6EFD;
+}
+
+.print-table .is-sun {
+    color: #DC3545;
+}
+
+.print-badge {
+    font-size: 8pt;
+    line-height: 1.1;
+    white-space: normal;
+}
+
+.print-absent {
+    text-decoration: line-through;
+}
+
+.print-trainee {
+    margin-left: 2px;
+    font-size: 7pt;
+    border: 1px solid #000000;
+}
+
+.print-shortage {
+    font-weight: bold;
+}
+
+/* 未公開のときだけ出す透かし（ななめ・灰色） */
+.print-watermark {
+    position: fixed;
+    top: 40%;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 60pt;
+    font-weight: bold;
+    color: rgba(128, 128, 128, 0.25);
+    transform: rotate(-45deg);
+    pointer-events: none;
+}
 
 /* ===== SM-09 店舗設定（新井） ===== */
 

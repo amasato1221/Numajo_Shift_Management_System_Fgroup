@@ -16,9 +16,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,15 +34,19 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
+import jp.numajo.fgroup.shift.constant.PeriodStatus;
 import jp.numajo.fgroup.shift.constant.Role;
 import jp.numajo.fgroup.shift.dto.PeriodPageView;
 import jp.numajo.fgroup.shift.dto.PublishResult;
+import jp.numajo.fgroup.shift.dto.ShiftTable;
 import jp.numajo.fgroup.shift.entity.ShiftPeriod;
 import jp.numajo.fgroup.shift.entity.User;
 import jp.numajo.fgroup.shift.exception.BusinessException;
 import jp.numajo.fgroup.shift.security.LoginUser;
 import jp.numajo.fgroup.shift.service.AssignmentService;
 import jp.numajo.fgroup.shift.service.PeriodService;
+import jp.numajo.fgroup.shift.service.RequiredStaffService;
+import jp.numajo.fgroup.shift.service.ShiftTableService;
 
 /**
  * ManagerPeriodController（SM-06：シフト作成）のテスト（20-SM-06 8章、97_テスト計画書 4.2）。
@@ -60,6 +68,7 @@ import jp.numajo.fgroup.shift.service.PeriodService;
  * deleteAssignment catch BusinessException  | 例外あり：コードをフラッシュ、なし：I2607
  * publish   catch BusinessException         | 例外あり：コードをフラッシュ、なし：I2608
  * publish   result.hasWarnings()            | 真：W2606 も出す、偽：I2608 のみ
+ * print     status == PUBLISHED             | 真：published=true、偽：false（透かしを出す）
  *
  * 組み合わせ表：時間指定の入力のエラー（値が無い／形が違う。20-00 2.2 パターン B：最初のエラーだけ出す）
  * No. | スタッフ | 日付 | 開始 | 終了 | 出すコード
@@ -81,13 +90,19 @@ class ManagerPeriodControllerTests {
 
     private PeriodService periodService;
     private AssignmentService assignmentService;
+    private ShiftTableService shiftTableService;
+    private RequiredStaffService requiredStaffService;
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         periodService = mock(PeriodService.class);
         assignmentService = mock(AssignmentService.class);
-        mvc = MockMvcBuilders.standaloneSetup(new ManagerPeriodController(periodService, assignmentService))
+        shiftTableService = mock(ShiftTableService.class);
+        requiredStaffService = mock(RequiredStaffService.class);
+        Clock clock = Clock.fixed(Instant.parse("2099-10-20T09:40:00Z"), ZoneId.of("Asia/Tokyo"));
+        mvc = MockMvcBuilders.standaloneSetup(new ManagerPeriodController(periodService, assignmentService,
+                shiftTableService, requiredStaffService, clock))
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .setViewResolvers(new InternalResourceViewResolver("/templates/", ".html"))
                 .build();
@@ -344,5 +359,47 @@ class ManagerPeriodControllerTests {
                 .andExpect(redirectedUrl("/manager/periods/1"))
                 .andExpect(flash().attribute("errorMessage", "E2611"))
                 .andExpect(flash().attribute("errorArgs", new Object[] { 2L }));
+    }
+
+    // ---------------------------------------------------------------- 印刷用シフト表（SM-08）
+
+    private ShiftPeriod printPeriod(PeriodStatus status) {
+        ShiftPeriod period = new ShiftPeriod();
+        period.setId(1L);
+        period.setStartDate(DATE.minusDays(1));
+        period.setEndDate(DATE.plusDays(13));
+        period.setStatus(status);
+        when(periodService.getPeriod(1L)).thenReturn(period);
+        return period;
+    }
+
+    @Test
+    void 印刷用シフト表_公開済みなら透かしなしで表と人数を持って印刷画面になる() throws Exception {
+        ShiftPeriod period = printPeriod(PeriodStatus.PUBLISHED);
+        ShiftTable table = new ShiftTable(List.of(ShiftTableService.toDayColumn(DATE)), List.of());
+        when(shiftTableService.build(period, true)).thenReturn(table);
+        when(requiredStaffService.requiredCounts(period.getStartDate(), period.getEndDate())).thenReturn(Map.of());
+        when(shiftTableService.slotCounts(table)).thenReturn(Map.of());
+
+        mvc.perform(get("/manager/periods/1/print"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("manager/print"))
+                .andExpect(model().attribute("published", true))
+                .andExpect(model().attribute("table", table))
+                .andExpect(model().attribute("periodLabel", "2099/11/1(日)〜11/15(日)"))
+                .andExpect(model().attribute("printedAtLabel", "2099/10/20 18:40"))
+                .andExpect(model().attribute("daySlotId", (byte) 1))
+                .andExpect(model().attribute("eveningSlotId", (byte) 2))
+                .andExpect(model().attributeExists("period", "required", "counts"));
+    }
+
+    @Test
+    void 印刷用シフト表_作成中なら透かしを出すためpublishedがfalse() throws Exception {
+        ShiftPeriod period = printPeriod(PeriodStatus.CLOSED);
+        ShiftTable table = new ShiftTable(List.of(ShiftTableService.toDayColumn(DATE)), List.of());
+        when(shiftTableService.build(period, true)).thenReturn(table);
+
+        mvc.perform(get("/manager/periods/1/print"))
+                .andExpect(model().attribute("published", false));
     }
 }
