@@ -19,6 +19,7 @@ import org.springframework.ui.Model;
 
 import jp.numajo.fgroup.shift.constant.StaffStatusFilter;
 import jp.numajo.fgroup.shift.dto.StaffRowView;
+import jp.numajo.fgroup.shift.service.SkillService;
 import jp.numajo.fgroup.shift.service.StaffService;
 
 /**
@@ -54,13 +55,15 @@ class ManagerStaffControllerTests {
 
     @Mock
     private StaffService staffService;
+    @Mock
+    private SkillService skillService;
 
     private ManagerStaffController controller;
     private Model model;
 
     @BeforeEach
     void setUp() {
-        controller = new ManagerStaffController(staffService);
+        controller = new ManagerStaffController(staffService, skillService);
         model = new ExtendedModelMap();
     }
 

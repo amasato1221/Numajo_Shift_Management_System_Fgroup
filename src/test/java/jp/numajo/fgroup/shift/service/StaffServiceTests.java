@@ -19,12 +19,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import jp.numajo.fgroup.shift.constant.StaffStatusFilter;
 import jp.numajo.fgroup.shift.dto.StaffRowView;
 import jp.numajo.fgroup.shift.entity.Skill;
 import jp.numajo.fgroup.shift.entity.User;
+import jp.numajo.fgroup.shift.repository.ShiftAssignmentRepository;
+import jp.numajo.fgroup.shift.repository.SkillRepository;
 import jp.numajo.fgroup.shift.repository.UserRepository;
+import jp.numajo.fgroup.shift.util.PasswordGenerator;
 
 /**
  * StaffService（SM-02：スタッフ一覧）のテスト。
@@ -46,6 +50,20 @@ class StaffServiceTests {
 
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private SkillRepository skillRepository;
+    @Mock
+    private ShiftAssignmentRepository assignmentRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private PasswordGenerator passwordGenerator;
+    @Mock
+    private NotificationSettingService notificationSettingService;
+    @Mock
+    private CalendarFeedService calendarFeedService;
+    @Mock
+    private OperationLogService operationLogService;
 
     private StaffService service;
 
@@ -53,7 +71,8 @@ class StaffServiceTests {
     void setUp() {
         ZoneId zone = ZoneId.of("Asia/Tokyo");
         Clock clock = Clock.fixed(NOW.atZone(zone).toInstant(), zone);
-        service = new StaffService(userRepository, clock);
+        service = new StaffService(userRepository, skillRepository, assignmentRepository, passwordEncoder,
+                passwordGenerator, notificationSettingService, calendarFeedService, operationLogService, clock);
     }
 
     private User user(Long id, String name, LocalDateTime lockedUntil, String... skillNames) {
