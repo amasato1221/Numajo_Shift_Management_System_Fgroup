@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -70,14 +71,17 @@ class StaffShiftViewTests {
     private final ShiftPeriodRepository shiftPeriodRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
+    private final Clock clock;
 
-    private final LocalDate base = LocalDate.now().withDayOfMonth(1);
+    /** 今月1日（現在日時は clock から取る） */
+    private LocalDate base;
 
     private MockMvc mvc;
     private LoginUser staff;
 
     @BeforeEach
     void setUp() {
+        base = LocalDate.now(clock).withDayOfMonth(1);
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         cleanUp();
         User u = new User();
@@ -128,7 +132,7 @@ class StaffShiftViewTests {
 
     @Test
     void 受付中で期限が明日_希望を出す直すボタンとI1201が出る() throws Exception {
-        ShiftPeriod p = savePeriod(base, PeriodStatus.OPEN, LocalDateTime.now().plusDays(1));
+        ShiftPeriod p = savePeriod(base, PeriodStatus.OPEN, LocalDateTime.now(clock).plusDays(1));
 
         String page = html(p.getId());
 
@@ -138,7 +142,7 @@ class StaffShiftViewTests {
 
     @Test
     void 受付中で期限が昨日_希望を出す直すボタンが出ずI1201は出る() throws Exception {
-        ShiftPeriod p = savePeriod(base, PeriodStatus.OPEN, LocalDateTime.now().minusDays(1));
+        ShiftPeriod p = savePeriod(base, PeriodStatus.OPEN, LocalDateTime.now(clock).minusDays(1));
 
         String page = html(p.getId());
 
@@ -147,7 +151,7 @@ class StaffShiftViewTests {
 
     @Test
     void 作成中の期間_希望を出す直すボタンが出ずI1201は出る() throws Exception {
-        ShiftPeriod p = savePeriod(base, PeriodStatus.CLOSED, LocalDateTime.now().plusDays(1));
+        ShiftPeriod p = savePeriod(base, PeriodStatus.CLOSED, LocalDateTime.now(clock).plusDays(1));
 
         String page = html(p.getId());
 
@@ -156,7 +160,7 @@ class StaffShiftViewTests {
 
     @Test
     void 公開済みの期間_希望を出す直すボタンもI1201も出ない() throws Exception {
-        ShiftPeriod p = savePeriod(base, PeriodStatus.PUBLISHED, LocalDateTime.now().plusDays(1));
+        ShiftPeriod p = savePeriod(base, PeriodStatus.PUBLISHED, LocalDateTime.now(clock).plusDays(1));
 
         String page = html(p.getId());
 
@@ -165,7 +169,7 @@ class StaffShiftViewTests {
 
     @Test
     void 期間の途中から終わりまで_期間外の日は空白で期間の15日分だけ日付が出る() throws Exception {
-        ShiftPeriod p = savePeriod(base, PeriodStatus.PUBLISHED, LocalDateTime.now().plusDays(1));
+        ShiftPeriod p = savePeriod(base, PeriodStatus.PUBLISHED, LocalDateTime.now(clock).plusDays(1));
         int before = base.getDayOfWeek().getValue() - 1;
         int after = DayOfWeek.SUNDAY.getValue() - base.withDayOfMonth(15).getDayOfWeek().getValue();
 
@@ -177,9 +181,9 @@ class StaffShiftViewTests {
 
     @Test
     void プルダウンの選択肢_範囲内の期間だけが並び表示中の期間が選ばれている() throws Exception {
-        ShiftPeriod old = savePeriod(base.minusMonths(4), PeriodStatus.PUBLISHED, LocalDateTime.now().minusMonths(4));
-        ShiftPeriod shown = savePeriod(base.minusMonths(1), PeriodStatus.PUBLISHED, LocalDateTime.now().minusDays(20));
-        ShiftPeriod next = savePeriod(base.plusMonths(1), PeriodStatus.OPEN, LocalDateTime.now().plusDays(1));
+        ShiftPeriod old = savePeriod(base.minusMonths(4), PeriodStatus.PUBLISHED, LocalDateTime.now(clock).minusMonths(4));
+        ShiftPeriod shown = savePeriod(base.minusMonths(1), PeriodStatus.PUBLISHED, LocalDateTime.now(clock).minusDays(20));
+        ShiftPeriod next = savePeriod(base.plusMonths(1), PeriodStatus.OPEN, LocalDateTime.now(clock).plusDays(1));
 
         String page = html(shown.getId());
 
@@ -196,7 +200,7 @@ class StaffShiftViewTests {
 
     @Test
     void 四か月前の期間のperiodId_選択肢にないので404になる() throws Exception {
-        ShiftPeriod old = savePeriod(base.minusMonths(4), PeriodStatus.PUBLISHED, LocalDateTime.now().minusMonths(4));
+        ShiftPeriod old = savePeriod(base.minusMonths(4), PeriodStatus.PUBLISHED, LocalDateTime.now(clock).minusMonths(4));
 
         mvc.perform(get("/staff/shifts").param("periodId", String.valueOf(old.getId())).with(user(staff)))
                 .andExpect(status().isNotFound());
