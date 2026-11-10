@@ -468,8 +468,9 @@ public class AssignmentService {
                         .thenComparing(ShiftRequest::getUser, ShiftWarningService.BY_KANA))
                 .map(r -> new TimeRequestRow(r.getUser().getId(), r.getUser().getName(), r.getWorkDate(),
                         DateTimeUtil.monthDay(r.getWorkDate()), r.getStartTime(), r.getEndTime(),
-                        DateTimeUtil.timeRange(r.getStartTime(), r.getEndTime()), assigned.contains(new TimeKey(r.getUser().getId(),
-                                r.getWorkDate(), r.getStartTime(), r.getEndTime()))))
+                        DateTimeUtil.timeRange(r.getStartTime(), r.getEndTime()),
+                        assigned.contains(new TimeKey(r.getUser().getId(), r.getWorkDate(), r.getStartTime(),
+                                r.getEndTime()))))
                 .toList();
     }
 

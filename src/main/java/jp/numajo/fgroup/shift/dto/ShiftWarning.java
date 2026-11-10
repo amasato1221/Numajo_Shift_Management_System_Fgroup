@@ -14,5 +14,6 @@ import jp.numajo.fgroup.shift.constant.WarningType;
  * @param messageCode メッセージコード（W2601〜W2603、W2607）
  * @param args        メッセージの引数
  */
-public record ShiftWarning(WarningType type, LocalDate workDate, String workDateLabel, Byte slotId, String messageCode, Object[] args) {
+public record ShiftWarning(WarningType type, LocalDate workDate, String workDateLabel, Byte slotId,
+        String messageCode, Object[] args) {
 }
