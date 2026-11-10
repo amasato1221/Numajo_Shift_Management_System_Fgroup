@@ -39,6 +39,7 @@ import org.springframework.web.context.WebApplicationContext;
 import jp.numajo.fgroup.shift.constant.AssignmentStatus;
 import jp.numajo.fgroup.shift.constant.PeriodStatus;
 import jp.numajo.fgroup.shift.constant.Role;
+import jp.numajo.fgroup.shift.constant.SubmissionState;
 import jp.numajo.fgroup.shift.constant.WarningType;
 import jp.numajo.fgroup.shift.dto.AssignmentMatrix;
 import jp.numajo.fgroup.shift.dto.CountCell;
@@ -50,14 +51,20 @@ import jp.numajo.fgroup.shift.dto.MatrixRow;
 import jp.numajo.fgroup.shift.dto.PeriodOption;
 import jp.numajo.fgroup.shift.dto.PeriodPageView;
 import jp.numajo.fgroup.shift.dto.PublishResult;
+import jp.numajo.fgroup.shift.dto.RequestDayRow;
+import jp.numajo.fgroup.shift.dto.RequestPageView;
 import jp.numajo.fgroup.shift.dto.ShiftWarning;
 import jp.numajo.fgroup.shift.dto.TimeAssignmentRow;
 import jp.numajo.fgroup.shift.dto.TimeRequestRow;
+import jp.numajo.fgroup.shift.entity.ShiftPeriod;
 import jp.numajo.fgroup.shift.entity.Slot;
 import jp.numajo.fgroup.shift.entity.User;
+import jp.numajo.fgroup.shift.form.ShiftRequestForm;
 import jp.numajo.fgroup.shift.repository.UserRepository;
 import jp.numajo.fgroup.shift.security.LoginUser;
 import jp.numajo.fgroup.shift.service.AssignmentService;
+import jp.numajo.fgroup.shift.service.PeriodService;
+import jp.numajo.fgroup.shift.service.ShiftRequestService;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -83,6 +90,10 @@ class ManagerPeriodControllerMvcTests {
 
     @MockitoBean
     private AssignmentService assignmentService;
+    @MockitoBean
+    private ShiftRequestService shiftRequestService;
+    @MockitoBean
+    private PeriodService periodService;
 
     private MockMvc mvc;
     private LoginUser manager;
@@ -280,5 +291,88 @@ class ManagerPeriodControllerMvcTests {
                 .andExpect(redirectedUrl("/manager/periods/1"));
 
         verify(assignmentService).toggleSlot(any(), any(), any(), any(Byte.class), any());
+    }
+
+    // ---------------------------------------------------------------- 希望の代理修正（SM-06-1）
+
+    private RequestPageView proxyPage(SubmissionState state, String statusLabel, String submittedAtLabel) {
+        PeriodOption option = new PeriodOption(1L, D1, D1.plusDays(1), "11/1〜11/2",
+                LocalDateTime.of(2099, 10, 15, 23, 59, 59), "2099/10/15 23:59", "10/15 23:59", PeriodStatus.CLOSED,
+                "11/1〜11/2（期限 10/15）");
+        List<RequestDayRow> days = List.of(new RequestDayRow(D1, "11月1日(日)", true, true),
+                new RequestDayRow(D1.plusDays(1), "11月2日(月)", true, false));
+        return new RequestPageView(option, List.of(), "2099/10/15 23:59", true, null, submittedAtLabel, state,
+                statusLabel, days, "山田 太郎");
+    }
+
+    private void givenProxyPage(RequestPageView page) {
+        when(shiftRequestService.getProxyPage(1L, 5L)).thenReturn(page);
+        when(periodService.getPeriod(1L)).thenReturn(new ShiftPeriod());
+        when(shiftRequestService.toForm(any(), any())).thenReturn(new ShiftRequestForm());
+    }
+
+    @Test
+    void 代理修正の画面が描画できる_未提出() throws Exception {
+        givenProxyPage(proxyPage(SubmissionState.NOT_SUBMITTED, "未提出", null));
+
+        String html = mvc.perform(get("/manager/periods/1/requests/5").with(user(manager)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("manager/request-proxy"))
+                .andReturn().getResponse().getContentAsString();
+
+        // 見出し・状態・案内・送り先・戻る先。日付・期間の文字は〜Label をそのまま出す（91 5.1）
+        assertThat(html).contains("山田 太郎さんの希望（11/1〜11/2）").contains("未提出")
+                .contains("店長が代わりに希望を直します。保存すると提出済みになります。")
+                .contains("action=\"/manager/periods/1/requests/5\"").contains("name=\"periodId\"")
+                .contains("11月1日(日)").contains("11月2日(月)").contains("data-fill=\"OK\"")
+                .contains("data-fill=\"NG\"").contains("href=\"/manager/periods/1\"");
+        // 取消ボタンはない
+        assertThat(html).doesNotContain("提出を取り消す");
+    }
+
+    @Test
+    void 代理修正の画面が描画できる_提出済みは最終更新も出す() throws Exception {
+        givenProxyPage(proxyPage(SubmissionState.SUBMITTED, "提出済み", "2099/10/09 10:00"));
+
+        String html = mvc.perform(get("/manager/periods/1/requests/5").with(user(manager)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("提出済み（最終更新 2099/10/09 10:00）");
+    }
+
+    @Test
+    void 代理修正の画面でバイトなら自分のホームへ戻る() throws Exception {
+        mvc.perform(get("/manager/periods/1/requests/5").with(user(staff)))
+                .andExpect(redirectedUrl("/staff/home"));
+        mvc.perform(post("/manager/periods/1/requests/5").with(csrf()).with(user(staff)))
+                .andExpect(redirectedUrl("/staff/home"));
+
+        verify(shiftRequestService, never()).proxySubmit(anyLong(), anyLong(), any(), anyLong());
+    }
+
+    @Test
+    void 代理修正でCSRFトークンなしなら保存されない() throws Exception {
+        givenProxyPage(proxyPage(SubmissionState.NOT_SUBMITTED, "未提出", null));
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(get("/manager/periods/1/requests/5").with(user(manager)).session(session))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/manager/periods/1/requests/5").with(user(manager)).session(session)
+                .param("periodId", "1"))
+                .andExpect(redirectedUrl("/manager/home"));
+
+        verify(shiftRequestService, never()).proxySubmit(anyLong(), anyLong(), any(), anyLong());
+    }
+
+    @Test
+    void 代理修正はCSRFトークンがあれば保存できる() throws Exception {
+        when(shiftRequestService.proxySubmit(anyLong(), anyLong(), any(), anyLong())).thenReturn("山田 太郎");
+
+        mvc.perform(post("/manager/periods/1/requests/5").with(csrf()).with(user(manager))
+                .param("periodId", "1").param("days[0].workDate", "2099-11-01").param("days[0].mode", "SLOT"))
+                .andExpect(redirectedUrl("/manager/periods/1"));
+
+        verify(shiftRequestService).proxySubmit(anyLong(), anyLong(), any(), anyLong());
     }
 }
