@@ -156,7 +156,8 @@ class ManagerPeriodControllerMvcTests {
         MatrixRow rowC = new MatrixRow(13L, "佐藤", false, true, Map.of(D1, Map.of(
                 (byte) 1, cell(RequestMark.NOT_SUBMITTED, AssignMark.NONE, null, "C2602", false),
                 (byte) 2, cell(RequestMark.OK, AssignMark.NONE, null, null, false))));
-        AssignmentMatrix matrix = new AssignmentMatrix(List.of(new DayColumn(D1, "11/1", "1", "日", "11/1(日)")), List.of(day, evening),
+        AssignmentMatrix matrix = new AssignmentMatrix(List.of(new DayColumn(D1, "11/1", "1", "日", "11/1(日)")),
+                List.of(day, evening),
                 List.of(rowA, rowB, rowC), Map.of(D1, Map.of(
                         (byte) 1, new CountCell(2, 1, false, false),
                         (byte) 2, new CountCell(0, 1, true, true))));
