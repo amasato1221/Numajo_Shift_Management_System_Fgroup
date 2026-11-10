@@ -181,8 +181,10 @@ class StaffShiftViewTests {
 
     @Test
     void プルダウンの選択肢_範囲内の期間だけが並び表示中の期間が選ばれている() throws Exception {
-        ShiftPeriod old = savePeriod(base.minusMonths(4), PeriodStatus.PUBLISHED, LocalDateTime.now(clock).minusMonths(4));
-        ShiftPeriod shown = savePeriod(base.minusMonths(1), PeriodStatus.PUBLISHED, LocalDateTime.now(clock).minusDays(20));
+        ShiftPeriod old = savePeriod(base.minusMonths(4), PeriodStatus.PUBLISHED,
+                LocalDateTime.now(clock).minusMonths(4));
+        ShiftPeriod shown = savePeriod(base.minusMonths(1), PeriodStatus.PUBLISHED,
+                LocalDateTime.now(clock).minusDays(20));
         ShiftPeriod next = savePeriod(base.plusMonths(1), PeriodStatus.OPEN, LocalDateTime.now(clock).plusDays(1));
 
         String page = html(shown.getId());
@@ -200,7 +202,8 @@ class StaffShiftViewTests {
 
     @Test
     void 四か月前の期間のperiodId_選択肢にないので404になる() throws Exception {
-        ShiftPeriod old = savePeriod(base.minusMonths(4), PeriodStatus.PUBLISHED, LocalDateTime.now(clock).minusMonths(4));
+        ShiftPeriod old = savePeriod(base.minusMonths(4), PeriodStatus.PUBLISHED,
+                LocalDateTime.now(clock).minusMonths(4));
 
         mvc.perform(get("/staff/shifts").param("periodId", String.valueOf(old.getId())).with(user(staff)))
                 .andExpect(status().isNotFound());
