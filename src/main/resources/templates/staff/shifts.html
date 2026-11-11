@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='shifts'">
+<head>
+    <title>シフトカレンダー</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <h1 class="h4 mb-4">シフトカレンダー</h1>
+
+        <!-- 選べる期間がないとき（I1202） -->
+        <p th:if="${period == null}" th:text="#{I1202}"></p>
+
+        <th:block th:if="${period != null}">
+            <!-- 期間・状態・提出期限・ボタン -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form th:action="@{/staff/shifts}" method="get" class="mb-3">
+                        <label for="periodId" class="form-label fw-bold">期間</label>
+                        <select id="periodId" name="periodId" class="form-select period-select" data-auto-submit>
+                            <option th:each="o : ${periodOptions}" th:value="${o.id}" th:text="${o.label}"
+                                    th:selected="${o.id == period.id}">10/16〜10/31</option>
+                        </select>
+                    </form>
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <span class="badge period-status"
+                              th:classappend="${period.status.name() == 'OPEN'} ? 'is-open' : (${period.status.name() == 'CLOSED'} ? 'is-closed' : 'is-published')"
+                              th:text="${period.status.label}">受付中</span>
+                        <span th:text="|提出期限：${period.deadlineLabel}|">提出期限：2026/10/15 23:59</span>
+                        <a class="btn btn-success btn-sm" th:if="${canEditRequest}"
+                           th:href="@{/staff/requests(periodId=${period.id})}">希望を出す・直す</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 未公開の注意（I1201） -->
+            <p class="text-muted small" th:if="${period.status.name() != 'PUBLISHED'}" th:text="#{I1201}"></p>
+
+            <!-- カレンダー（月曜はじまり。期間外の日は空白） -->
+            <table class="shift-calendar">
+                <thead>
+                    <tr>
+                        <th>月</th>
+                        <th>火</th>
+                        <th>水</th>
+                        <th>木</th>
+                        <th>金</th>
+                        <th class="is-sat">土</th>
+                        <th class="is-sun">日</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="week : ${calendar.weeks}">
+                        <td th:each="day, dayStat : ${week}" class="shift-calendar-day"
+                            th:classappend="${day.inMonth} ? (${day.today} ? 'is-today') : 'is-outside'">
+                            <th:block th:if="${day.inMonth}">
+                                <span class="shift-calendar-date"
+                                      th:classappend="${dayStat.index == 5} ? 'is-sat' : (${dayStat.index == 6} ? 'is-sun')"
+                                      th:text="${day.dayLabel}">16</span>
+                                <th:block th:each="b : ${day.badges}">
+                                    <span th:replace="~{fragments/shift-badge :: badge(${b})}"></span>
+                                </th:block>
+                            </th:block>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </th:block>
+    </div>
+</body>
+</html>

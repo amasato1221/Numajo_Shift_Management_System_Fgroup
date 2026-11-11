@@ -429,6 +429,35 @@ body {
 
 /* ===== SB-02 シフトカレンダー（川端） ===== */
 
+/* 状態のバッジ：OPEN 受付中（青）・CLOSED 作成中（オレンジ）・PUBLISHED 公開済み（緑） */
+.period-status {
+    font-size: 0.875rem;
+    color: #FFFFFF;
+}
+
+.period-status.is-open {
+    background-color: #0D6EFD;
+}
+
+.period-status.is-closed {
+    background-color: var(--color-evening);
+}
+
+.period-status.is-published {
+    background-color: var(--color-day);
+}
+
+/* 期間のプルダウンは、広い画面では幅を抑える */
+.period-select {
+    max-width: 320px;
+}
+
+@media (max-width: 767.98px) {
+    .period-select {
+        max-width: none;
+    }
+}
+
 /* ===== SB-03 シフト希望提出（栗原） ===== */
 
 /* ===== SB-04 みんなのシフト（新井） ===== */
