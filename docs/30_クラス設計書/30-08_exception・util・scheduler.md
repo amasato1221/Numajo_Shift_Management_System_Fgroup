@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-08 |
-| 版 | 第1.4版（令和8年11月9日） |
+| 版 | 第1.5版（令和8年11月11日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -15,6 +15,7 @@
 | 1.2 | 令和8年11月3日 | 実装中の質問（川端）を反映：scheduler の2クラスに `@Profile("!test")` を付け、テストの中で定期処理が動かないようにした。scheduler のテストを Spring を起動しない単体テストにした | 新井 |
 | 1.3 | 令和8年11月9日 | 日付の表示の統一（10_基本設計書 5.3 第1.4版）：DateTimeUtil に `timeRange`・`shortDateWithDay`・`yearMonth`・`day`・`dayOfWeek` を追加（`shortDateWithDay`・`dayOfWeek` は PR #53 で実装済みのものを設計書に反映） | 新井 |
 | 1.4 | 令和8年11月9日 | PR #54・#57 の確認を反映：ShiftTimeUtil に時刻プルダウンに出す選択肢 `timeSelectOptions()`（`SelectOption` のリスト）を足した（テンプレートで時刻の文字を組み立てないため。91 5.1） | 新井 |
+| 1.5 | 令和8年11月11日 | コードと設計書の再チェックを反映：DateTimeUtil の全文を、実際のコードと同じ並び・同じコメントに直した（メソッドと動きは変わらない） | 新井 |
 
 このページの exception と util のコードは**全文**です（scheduler は 4章の形で書きます）。そのまま写してください（30-00 1章）。
 
@@ -269,21 +270,6 @@ public final class DateTimeUtil {
         return start.format(TIME) + "〜" + end.format(TIME);
     }
 
-    /** 例：11/1〜11/15 */
-    public static String period(LocalDate start, LocalDate end) {
-        return start.format(SHORT_DATE) + "〜" + end.format(SHORT_DATE);
-    }
-
-    /** 例：10/15 */
-    public static String shortDate(LocalDate date) {
-        return date.format(SHORT_DATE);
-    }
-
-    /** 月日と曜日（短い）。例：11/1(日) */
-    public static String shortDateWithDay(LocalDate date) {
-        return date.format(PRINT_END);
-    }
-
     /** 例：2026年10月 */
     public static String yearMonth(YearMonth ym) {
         return ym.format(YEAR_MONTH);
@@ -294,9 +280,24 @@ public final class DateTimeUtil {
         return date.format(DAY);
     }
 
+    /** 例：11/1〜11/15 */
+    public static String period(LocalDate start, LocalDate end) {
+        return start.format(SHORT_DATE) + "〜" + end.format(SHORT_DATE);
+    }
+
+    /** 例：10/15 */
+    public static String shortDate(LocalDate date) {
+        return date.format(SHORT_DATE);
+    }
+
     /** 曜日だけ。例：土 */
     public static String dayOfWeek(LocalDate date) {
         return date.format(DAY_OF_WEEK);
+    }
+
+    /** 月日と曜日。例：11/1(日) */
+    public static String shortDateWithDay(LocalDate date) {
+        return date.format(PRINT_END);
     }
 
     /** 例：2025/12/3 */

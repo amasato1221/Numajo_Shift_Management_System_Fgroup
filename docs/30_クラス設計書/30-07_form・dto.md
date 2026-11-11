@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-07 |
-| 版 | 第1.4版（令和8年11月9日） |
+| 版 | 第1.5版（令和8年11月11日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -15,6 +15,7 @@
 | 1.2 | 令和8年11月2日 | 実装中の質問（栗原）を反映：DayRequestForm#workDate に ISO 形式の指定を追加。RequestDayRow に dateLabel、RequestPageView に deadlineLabel・submittedAtLabel、StaffDetailView に updatedAtLabel・lockedUntilLabel を追加。StaffRowView の skillNames を職能名の順にした | 新井 |
 | 1.3 | 令和8年11月9日 | 日付の表示の統一（10_基本設計書 5.3 第1.4版）：3章の「テンプレートで `#temporals.format` を使ってよい」を削除し、日付型の項目には表示用の `〜Label` を必ず並べる決まりにした。4章の dto に `〜Label` を追加し、日付の列を表す `DayColumn` を新しく作った（`ShiftTable`・`AssignmentMatrix` の `days`） | 新井 |
 | 1.4 | 令和8年11月9日 | SelectOption を時刻プルダウンにも使うことを書いた（`ShiftTimeUtil#timeSelectOptions()`） | 新井 |
+| 1.5 | 令和8年11月11日 | コードと設計書の再チェックを反映：ShiftTable に、スマホの日付ごとの一覧で使うメソッド namesOn を書いた（PR #50） | 新井 |
 
 ## 1. form の決まり
 
@@ -100,7 +101,7 @@ public class SkillForm {
 | `RequestPageView` | `PeriodOption period, List<PeriodOption> periodOptions, String deadlineLabel, boolean editable, LocalDateTime submittedAt, String submittedAtLabel, SubmissionState submissionState, String statusLabel, List<RequestDayRow> days, String staffName`（`deadlineLabel`・`submittedAtLabel`＝日時） | `ShiftRequestService` |
 | `ShiftTableRow` | `Long userId, String name, boolean trainee, Map<LocalDate, List<ShiftBadge>> cells, int workDays` | `ShiftTableService` |
 | `DayColumn` | `LocalDate date, String dateLabel, String dayLabel, String dayOfWeekLabel, String dateWithDayLabel`（表の日付の列。`dateLabel`＝日付（短い）、`dayLabel`＝日だけ、`dayOfWeekLabel`＝曜日だけ、`dateWithDayLabel`＝月日と曜日（短い）。セルは `row.cells[col.date]` で引く） | `ShiftTableService`、`AssignmentService` |
-| `ShiftTable` | `List<DayColumn> days, List<ShiftTableRow> rows` | `ShiftTableService` |
+| `ShiftTable` | `List<DayColumn> days, List<ShiftTableRow> rows`（項目のほかに、メソッド `List<String> namesOn(LocalDate day, BadgeType type)` を持つ。その日にその種類のバッジがある人の名前を行の順に返す。時間指定は「田中 13-22」のように時間を付ける。20-SB-04 のスマホの一覧で使う） | `ShiftTableService` |
 | `ChatMessageView` | `Long id, String senderName, String body, LocalDateTime createdAt, String createdAtLabel, boolean mine`（`createdAtLabel`＝日時（短い）） | `ChatService` |
 | `ChatListRow` | `Long staffId, String initial, String staffName, boolean active, String lastBody, LocalDateTime lastAt, String lastAtLabel, long unreadCount`（`lastAtLabel`＝今日なら時刻、今年なら日付（短い）、それより前は日付（短い・年付き）。20-SM-10） | `ChatService` |
 | `SubmissionStatusView` | `PeriodOption period, int submitted, int total, List<String> unsubmittedNames` | `DashboardService` |

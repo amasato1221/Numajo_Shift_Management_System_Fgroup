@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-06 |
-| 版 | 第1.3版（令和8年11月6日） |
+| 版 | 第1.4版（令和8年11月11日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -14,12 +14,13 @@
 | 1.1 | 令和8年10月22日 | 設計書評価の指摘を反映：StringTrimmerEditor は SC-01 には効かないことを明記（L6） | 新井 |
 | 1.2 | 令和8年11月5日 | 2章：SB-04 の allShifts を StaffShiftController から StaffAllShiftController（`/staff/all-shifts`）に移した（SB-02 と持ち主が違うため。98 第1.8版） | 新井 |
 | 1.3 | 令和8年11月6日 | 2章：SB-01 の実装（PR #49）に合わせ、今月を `YearMonth.now(clock)` で決めるため StaffHomeController が Clock も受け取ることを書いた | 新井 |
+| 1.4 | 令和8年11月11日 | コードと設計書の再チェックを反映：0章の `@RequiredArgsConstructor` は依存があるときだけ付けると書いた。5章の 404 にする例外を、30-08 の全文・10_基本設計書 5.5 と同じ5つにした | 新井 |
 
 ## 0. controller の決まり
 
 | 決まり | 内容 |
 | --- | --- |
-| 付けるアノテーション | `@Controller`、`@RequiredArgsConstructor`。URLの共通部分はクラスに `@RequestMapping("/manager/staff")` のように付ける |
+| 付けるアノテーション | `@Controller`。依存（`private final` のフィールド）があるときは `@RequiredArgsConstructor` も付ける（依存のない `RootController`・`LoginController` には付けない）。URLの共通部分はクラスに `@RequestMapping("/manager/staff")` のように付ける |
 | 戻り値 | テンプレート名（`"manager/staff-list"`）か `"redirect:/…"`。IC-01 だけ `ResponseEntity<String>` |
 | ログイン中の人 | 引数に `@AuthenticationPrincipal LoginUser loginUser` |
 | フォーム | `@Validated @ModelAttribute("xxxForm") XxxForm form, BindingResult bindingResult` の順に必ず並べる |
@@ -183,5 +184,5 @@ public class GlobalModelAdvice {
 
 | 例外 | ステータス | 画面 |
 | --- | --- | --- |
-| `ResourceNotFoundException`、`NoResourceFoundException`、`MethodArgumentTypeMismatchException` | 404 | `error/404` |
+| `ResourceNotFoundException`、`NoResourceFoundException`、`MethodArgumentTypeMismatchException`、`MissingServletRequestParameterException`、`HttpRequestMethodNotSupportedException` | 404 | `error/404` |
 | `Exception`（上以外） | 500 | `error/500`（`log.error` でスタックトレースを出す） |
