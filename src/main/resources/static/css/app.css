@@ -569,12 +569,226 @@ body {
 /* ===== SM-05 必要人数設定（新井） ===== */
 
 /* ===== SM-06 シフト作成（栗原） ===== */
+/* 割当表：横にスクロールし、スタッフの列は左に固定する（20-SM-06 2.1） */
+.assign-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.assign-table th,
+.assign-table td {
+    min-width: 48px;
+    padding: 2px;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid var(--color-border);
+    background-color: #FFFFFF;
+}
+
+.assign-table thead th {
+    font-weight: normal;
+    background-color: var(--color-bg);
+}
+
+.assign-table .assign-name {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 140px;
+    text-align: left;
+    white-space: nowrap;
+    background-color: var(--color-bg);
+}
+
+.assign-table .is-sat {
+    color: #0D6EFD;
+}
+
+.assign-table .is-sun {
+    color: var(--color-absent);
+}
+
+/* セル：左が希望、右が割当。割当（●・◐）があれば薄い緑 */
+.assign-table .assign-cell {
+    position: relative;
+}
+
+.assign-table .assign-cell.is-assigned {
+    background-color: #E6F3EC;
+}
+
+.assign-cell-btn {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    width: 100%;
+    padding: 4px;
+    font-size: 0.9rem;
+    color: inherit;
+    background: transparent;
+    border: 0;
+}
+
+.assign-cell-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.assign-absent-link {
+    position: absolute;
+    right: 2px;
+    bottom: 0;
+    font-size: 0.65rem;
+}
+
+/* スマホでは割当表を見るだけにする（20-SM-06 3.2「画面の大きさ」。I2604 の案内を出す） */
+@media (max-width: 767.98px) {
+    .assign-cell-btn,
+    .assign-absent-link {
+        pointer-events: none;
+    }
+}
+
+/* 最下行：不足は赤字、研修中のみは黄の背景、足りていれば緑字 */
+.assign-table .assign-count {
+    font-weight: bold;
+}
+
+.assign-table .assign-count.is-shortage {
+    color: var(--color-absent);
+}
+
+.assign-table .assign-count.is-enough {
+    color: var(--color-day);
+}
+
+.assign-table .assign-count.is-trainee-only {
+    background-color: #FFF3CD;
+}
+
+/* 警告の「職能不足」はオレンジ */
+.badge-skill {
+    background-color: var(--color-evening);
+    color: #FFFFFF;
+}
 
 /* ===== SM-06-1 希望の代理修正（栗原） ===== */
 
 /* ===== SM-07 欠勤登録（川端） ===== */
 
 /* ===== SM-08 印刷用シフト表（栗原） ===== */
+/* 印刷の形：A4横。9pt、行の高さ6mm（20-SM-08 1章） */
+@page {
+    size: A4 landscape;
+    margin: 10mm;
+}
+
+.print-sheet {
+    padding: 8px 12px;
+    font-size: 9pt;
+    color: #000000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.print-actions {
+    margin-bottom: 8px;
+}
+
+.print-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+}
+
+.print-title {
+    margin: 0;
+    font-size: 12pt;
+    font-weight: bold;
+}
+
+.print-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.print-table thead {
+    display: table-header-group;
+}
+
+.print-table tr {
+    page-break-inside: avoid;
+}
+
+.print-table th,
+.print-table td {
+    height: 6mm;
+    padding: 0 1px;
+    border: 1px solid #000000;
+    text-align: center;
+    vertical-align: middle;
+    font-weight: normal;
+    line-height: 1.2;
+    overflow: hidden;
+}
+
+.print-table thead th {
+    background-color: #EEEEEE;
+}
+
+.print-table .print-name {
+    width: 80px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.print-table .print-days {
+    width: 36px;
+}
+
+.print-table .is-sat {
+    color: #0D6EFD;
+}
+
+.print-table .is-sun {
+    color: #DC3545;
+}
+
+.print-badge {
+    font-size: 9px;
+    line-height: 1.1;
+    white-space: normal;
+}
+
+.print-absent {
+    text-decoration: line-through;
+}
+
+.print-trainee {
+    margin-left: 2px;
+    font-size: 7pt;
+    border: 1px solid #000000;
+}
+
+.print-shortage {
+    font-weight: bold;
+}
+
+/* 未公開のときだけ出す透かし（ななめ・灰色） */
+.print-watermark {
+    position: fixed;
+    top: 40%;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 60pt;
+    font-weight: bold;
+    color: rgba(128, 128, 128, 0.25);
+    transform: rotate(-45deg);
+    pointer-events: none;
+}
 
 /* ===== SM-09 店舗設定（新井） ===== */
 
