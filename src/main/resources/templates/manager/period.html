@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='periods'">
+<head>
+    <title>シフト作成</title>
+</head>
+<body>
+<!--
+  SM-06 シフト作成（希望一覧・割当・公開）（20-SM-06）。
+  スマホでは割当を見るだけにする（I2604）：セルは CSS で押せなくし、時間指定の割当のフォーム・ボタンと「公開する」は d-none d-md-* で隠す。
+  割当表のセルは、表全体を囲む1つのフォームのボタン（name="cell"、値は「ユーザーID:日付:枠ID」）。
+  日付・時刻の文字は〜Label をそのまま出す（91 5.1）。送る値（セルのボタン・hidden・プルダウン）は日付型・時刻型をそのまま書く。
+-->
+<div layout:fragment="content">
+    <h1 class="h4 mb-3">シフト作成</h1>
+
+    <!-- 期間・状態・期限・印刷・公開 -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <label for="periodId" class="visually-hidden">期間</label>
+        <select id="periodId" class="form-select w-auto" th:attr="data-auto-navigate=@{/manager/periods/}">
+            <option th:each="o : ${page.periodOptions}" th:value="${o.id}" th:text="${o.label}"
+                    th:selected="${o.id == page.period.id}">11/1〜11/15（作成中）</option>
+        </select>
+        <span class="badge" th:text="${page.period.status.label}"
+              th:classappend="${page.period.status.name() == 'OPEN'} ? 'text-bg-info'
+                  : (${page.period.status.name() == 'CLOSED'} ? 'text-bg-warning' : 'text-bg-success')">作成中</span>
+        <span class="text-muted small"
+              th:text="|提出期限 ${page.period.deadlineLabel}|">提出期限 2026/10/15 23:59</span>
+        <span class="text-muted small" th:if="${page.publishedAtLabel != null}"
+              th:text="|公開日時 ${page.publishedAtLabel}|">公開日時 2026/10/20 18:30</span>
+
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" target="_blank" rel="noopener"
+               th:href="@{/manager/periods/{id}/print(id=${page.period.id})}">印刷</a>
+            <form th:unless="${page.period.status.name() == 'PUBLISHED'}" method="post"
+                  th:action="@{/manager/periods/{id}/publish(id=${page.period.id})}" class="d-none d-md-flex align-items-center">
+                <button type="submit" class="btn btn-primary" th:disabled="${!page.publishable}"
+                        th:data-confirm="#{C2601}">公開する</button>
+                <span class="text-danger small ms-2" th:if="${page.notPublishableCode != null}"
+                      th:text="#{${page.notPublishableCode}}">受付中のため公開できません。</span>
+            </form>
+        </div>
+    </div>
+
+    <!-- 説明 -->
+    <div class="alert alert-info" role="alert" th:if="${page.period.status.name() == 'OPEN'}" th:text="#{I2601}"></div>
+    <div class="alert alert-info" role="alert" th:if="${page.period.status.name() == 'PUBLISHED'}"
+         th:text="#{I2602}"></div>
+    <div class="alert alert-warning d-md-none" role="alert" th:text="#{I2604}">シフトの割当はPCで操作してください。</div>
+
+    <!-- 割当表 -->
+    <form method="post" th:action="@{/manager/periods/{id}/assignments/toggle(id=${page.period.id})}">
+        <div class="table-responsive assign-wrap mb-4">
+            <table class="assign-table">
+                <thead>
+                <tr>
+                    <th rowspan="2" class="assign-name">スタッフ</th>
+                    <th th:each="col : ${page.matrix.days}" th:colspan="${#lists.size(page.matrix.slots)}"
+                        th:classappend="${col.date.dayOfWeek.value == 6} ? 'is-sat' : (${col.date.dayOfWeek.value == 7} ? 'is-sun' : '')">
+                        <span th:text="${col.dateLabel}">11/1</span>
+                        <span th:text="${col.dayOfWeekLabel}">日</span>
+                    </th>
+                </tr>
+                <tr>
+                    <th:block th:each="col : ${page.matrix.days}">
+                        <th th:each="slot : ${page.matrix.slots}" class="assign-slot"
+                            th:text="${slot.id == 1} ? '☀' : '☾'" th:title="${slot.name}">☀</th>
+                    </th:block>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${page.matrix.rows}">
+                    <th scope="row" class="assign-name">
+                        <span th:text="${row.name}">山田 太郎</span>
+                        <span class="badge text-bg-warning" th:if="${row.trainee}">研</span>
+                        <span class="badge text-bg-secondary" th:unless="${row.submitted}">未提出</span>
+                        <a class="d-block small" th:if="${page.period.status.name() != 'PUBLISHED'}"
+                           th:href="@{/manager/periods/{id}/requests/{userId}(id=${page.period.id},userId=${row.userId})}">希望を直す</a>
+                    </th>
+                    <th:block th:each="col : ${page.matrix.days}">
+                        <td th:each="slot : ${page.matrix.slots}" class="assign-cell"
+                            th:with="cell=${row.cells.get(col.date).get(slot.id)}"
+                            th:classappend="${cell.assign.name() == 'SLOT' or cell.assign.name() == 'TIME'} ? 'is-assigned'">
+                            <button type="submit" name="cell" class="assign-cell-btn"
+                                    th:value="|${row.userId}:${col.date}:${slot.id}|"
+                                    th:disabled="${!page.editable or cell.disabled}"
+                                    th:attr="data-confirm=${cell.confirmCode != null} ? #{${cell.confirmCode}} : null">
+                                <span class="assign-request" th:title="${cell.requestTitle}"
+                                      th:switch="${cell.request.name()}">
+                                    <span th:case="'OK'">○</span>
+                                    <span th:case="'NG'" class="text-danger">×</span>
+                                    <span th:case="'TIME'">時</span>
+                                    <span th:case="'NOT_SUBMITTED'" class="text-muted">・</span>
+                                    <span th:case="*" class="text-muted">－</span>
+                                </span>
+                                <span class="assign-mark" th:switch="${cell.assign.name()}">
+                                    <span th:case="'SLOT'">●</span>
+                                    <span th:case="'TIME'">◐</span>
+                                    <span th:case="'ABSENT'" class="text-danger">欠</span>
+                                    <span th:case="*"></span>
+                                </span>
+                            </button>
+                            <a class="assign-absent-link" th:if="${cell.assign.name() == 'SLOT' and page.period.status.name() == 'PUBLISHED'}"
+                               th:href="@{/manager/absences(assignmentId=${cell.assignmentId})}">欠勤</a>
+                        </td>
+                    </th:block>
+                </tr>
+                </tbody>
+                <tfoot>
+                <tr>
+                    <th scope="row" class="assign-name">割当／必要</th>
+                    <th:block th:each="col : ${page.matrix.days}">
+                        <td th:each="slot : ${page.matrix.slots}" class="assign-count"
+                            th:with="count=${page.matrix.counts.get(col.date).get(slot.id)}"
+                            th:classappend="(${count.shortage} ? 'is-shortage' : 'is-enough') + (${count.traineeOnly} ? ' is-trainee-only' : '')"
+                            th:text="|${count.assigned}/${count.required}|">2/2</td>
+                    </th:block>
+                </tr>
+                </tfoot>
+            </table>
+        </div>
+    </form>
+
+    <!-- 警告 -->
+    <h2 class="h5">警告</h2>
+    <p th:if="${#lists.isEmpty(page.warnings)}" th:text="#{I2603}">警告はありません。</p>
+    <div class="table-responsive mb-4" th:unless="${#lists.isEmpty(page.warnings)}">
+        <table class="table table-sm align-middle">
+            <thead>
+            <tr>
+                <th>種類</th>
+                <th>日付</th>
+                <th>枠</th>
+                <th>内容</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="w : ${page.warnings}" th:switch="${w.type.name()}">
+                <td th:case="'TRAINEE_ONLY'"><span class="badge text-bg-warning">研修中のみ</span></td>
+                <td th:case="'SHORTAGE'"><span class="badge text-bg-danger">人数不足</span></td>
+                <td th:case="'SKILL'"><span class="badge badge-skill">職能不足</span></td>
+                <td th:case="*"><span class="badge text-bg-secondary">無効なスタッフ</span></td>
+                <td th:text="${w.workDateLabel}">11月1日(日)</td>
+                <td th:text="${w.args[1]}">日勤</td>
+                <td th:text="${#messages.msgWithParams(w.messageCode, w.args)}">…</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 時間指定の希望 -->
+    <h2 class="h5">時間指定の希望</h2>
+    <p class="text-muted" th:if="${#lists.isEmpty(page.timeRequests)}" th:text="#{I2611}">時間指定の希望はありません。</p>
+    <div class="table-responsive mb-4" th:unless="${#lists.isEmpty(page.timeRequests)}">
+        <table class="table table-sm align-middle">
+            <thead>
+            <tr>
+                <th>名前</th>
+                <th>日付</th>
+                <th>時間</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${page.timeRequests}">
+                <td th:text="${r.name}">山田 太郎</td>
+                <td th:text="${r.workDateLabel}">11月1日(日)</td>
+                <td th:text="${r.timeLabel}">13:00〜22:00</td>
+                <td>
+                    <span th:if="${r.assigned}">割当済み</span>
+                    <form th:if="${!r.assigned and page.editable}" method="post" class="d-none d-md-block"
+                          th:action="@{/manager/periods/{id}/assignments/time(id=${page.period.id})}">
+                        <input type="hidden" name="userId" th:value="${r.userId}">
+                        <input type="hidden" name="workDate" th:value="${r.workDate}">
+                        <input type="hidden" name="startTime" th:value="${r.startTime}">
+                        <input type="hidden" name="endTime" th:value="${r.endTime}">
+                        <button type="submit" class="btn btn-sm btn-outline-primary">この時間で割り当てる</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 時間指定で割り当てる -->
+    <th:block th:if="${page.editable}">
+        <h2 class="h5 d-none d-md-block">時間指定で割り当てる</h2>
+        <form method="post" class="row g-2 mb-4 d-none d-md-flex" th:object="${timeAssignmentForm}"
+              th:action="@{/manager/periods/{id}/assignments/time(id=${page.period.id})}">
+            <div class="col-12 col-md-3">
+                <label for="timeUserId" class="form-label">スタッフ</label>
+                <select id="timeUserId" name="userId" class="form-select">
+                    <option value="">選んでください</option>
+                    <option th:each="u : ${staffOptions}" th:value="${u.id}" th:text="${u.name}">山田 太郎</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="timeWorkDate" class="form-label">日付</label>
+                <select id="timeWorkDate" name="workDate" class="form-select">
+                    <option value="">選んでください</option>
+                    <option th:each="col : ${page.matrix.days}" th:value="${col.date}"
+                            th:text="${col.dateWithDayLabel}">11/1(日)</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="timeStart" class="form-label">開始</label>
+                <select id="timeStart" name="startTime" class="form-select">
+                    <option value="">選んでください</option>
+                    <option th:each="o : ${timeOptions}" th:value="${o.value}"
+                            th:text="${o.label}">8:00</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="timeEnd" class="form-label">終了</label>
+                <select id="timeEnd" name="endTime" class="form-select">
+                    <option value="">選んでください</option>
+                    <option th:each="o : ${timeOptions}" th:value="${o.value}"
+                            th:text="${o.label}">8:00</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">割り当てる</button>
+            </div>
+        </form>
+    </th:block>
+
+    <!-- 時間指定の割当 -->
+    <h2 class="h5">時間指定の割当</h2>
+    <p class="text-muted" th:if="${#lists.isEmpty(page.timeAssignments)}" th:text="#{I2612}">時間指定の割当はありません。</p>
+    <div class="table-responsive mb-4" th:unless="${#lists.isEmpty(page.timeAssignments)}">
+        <table class="table table-sm align-middle">
+            <thead>
+            <tr>
+                <th>名前</th>
+                <th>日付</th>
+                <th>時間</th>
+                <th>状態</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="a : ${page.timeAssignments}">
+                <td th:text="${a.name}">山田 太郎</td>
+                <td th:text="${a.workDateLabel}">11月1日(日)</td>
+                <td th:text="${a.timeLabel}">13:00〜22:00</td>
+                <td>
+                    <span th:if="${a.status.name() == 'ASSIGNED'}">出勤</span>
+                    <span class="text-danger" th:unless="${a.status.name() == 'ASSIGNED'}">欠勤</span>
+                </td>
+                <td th:if="${a.status.name() == 'ASSIGNED' and page.editable}">
+                    <div class="d-flex gap-2">
+                        <form method="post" class="d-none d-md-block"
+                              th:action="@{/manager/periods/{id}/assignments/{aid}/delete(id=${page.period.id},aid=${a.assignmentId})}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    th:attr="data-confirm=${page.period.status.name() == 'PUBLISHED'} ? #{C2604} : null">外す</button>
+                        </form>
+                        <a class="btn btn-sm btn-outline-secondary" th:if="${page.period.status.name() == 'PUBLISHED'}"
+                           th:href="@{/manager/absences(assignmentId=${a.assignmentId})}">欠勤登録</a>
+                    </div>
+                </td>
+                <td th:unless="${a.status.name() == 'ASSIGNED' and page.editable}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
