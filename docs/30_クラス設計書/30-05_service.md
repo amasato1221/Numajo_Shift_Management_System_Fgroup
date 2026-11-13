@@ -3,9 +3,8 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-05 |
-
 | 版 | 第1.9版（令和8年11月11日） |
-
+| 対象読者 | 実装をする班員 |
 
 ## 改版履歴
 
@@ -19,9 +18,8 @@
 | 1.5 | 令和8年11月6日 | SB-01 の実装（PR #49）に合わせた：1.2 に NotificationService#toRow を足し、2.1 StaffHomeService の依存に SlotRepository を足した | 新井 |
 | 1.6 | 令和8年11月9日 | 0章に「日付の表示」の決まりを足した（10_基本設計書 5.3 第1.4版）。toOption で periodLabel・deadlineLabel・deadlineShortLabel も入れることを書いた | 新井 |
 | 1.7 | 令和8年11月9日 | SM-06 の実装（PR #57）に合わせた：3.6 に AssignmentService#findStaffOptions、3.7 に ShiftWarningService の covers・isTraineeOnly・BY_KANA（package-private）を足した | 新井 |
-
+| 1.8 | 令和8年11月9日 | 日付の表示の直し（PR #60）に合わせた：2.3 に ShiftTableService#toDayColumn（static）を足した | 新井 |
 | 1.9 | 令和8年11月11日 | コードと設計書の再チェックを反映：1.3 NotificationSettingService の依存から使っていない UserRepository を外し、save は null の値も E1501 にすると書いた（PR #27）。2.3 ShiftTableService の依存に ShiftPeriodRepository・Clock、メソッドに findPublishedPeriods・choosePeriod を足した（PR #50。Controller が Repository を直接呼ばないため） | 新井 |
-
 
 ## 0. service の決まり
 
