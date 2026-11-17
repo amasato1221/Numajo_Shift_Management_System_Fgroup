@@ -54,7 +54,8 @@ class DeadlineNotificationSchedulerTests {
 
     @BeforeEach
     void setUp() {
-        scheduler = new DeadlineNotificationScheduler(notificationService, clockAt(LocalDateTime.of(2026, 11, 17, 9, 0)));
+        scheduler = new DeadlineNotificationScheduler(notificationService,
+                clockAt(LocalDateTime.of(2026, 11, 17, 9, 0)));
     }
 
     private static Clock clockAt(LocalDateTime tokyoDateTime) {
