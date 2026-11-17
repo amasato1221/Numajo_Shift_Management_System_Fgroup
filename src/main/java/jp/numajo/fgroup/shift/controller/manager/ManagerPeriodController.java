@@ -27,15 +27,18 @@ import jakarta.validation.ConstraintViolation;
 import jp.numajo.fgroup.shift.constant.PeriodStatus;
 import jp.numajo.fgroup.shift.constant.SlotIds;
 import jp.numajo.fgroup.shift.dto.PublishResult;
+import jp.numajo.fgroup.shift.dto.RequestPageView;
 import jp.numajo.fgroup.shift.dto.ShiftTable;
 import jp.numajo.fgroup.shift.entity.ShiftPeriod;
 import jp.numajo.fgroup.shift.exception.BusinessException;
 import jp.numajo.fgroup.shift.form.AssignmentToggleForm;
+import jp.numajo.fgroup.shift.form.ShiftRequestForm;
 import jp.numajo.fgroup.shift.form.TimeAssignmentForm;
 import jp.numajo.fgroup.shift.security.LoginUser;
 import jp.numajo.fgroup.shift.service.AssignmentService;
 import jp.numajo.fgroup.shift.service.PeriodService;
 import jp.numajo.fgroup.shift.service.RequiredStaffService;
+import jp.numajo.fgroup.shift.service.ShiftRequestService;
 import jp.numajo.fgroup.shift.service.ShiftTableService;
 import jp.numajo.fgroup.shift.util.DateTimeUtil;
 import jp.numajo.fgroup.shift.util.ShiftTimeUtil;
@@ -45,7 +48,7 @@ import lombok.RequiredArgsConstructor;
  * シフト作成（SM-06：希望一覧・割当・公開）。20-SM-06。
  *
  * <p>
- * 印刷用シフト表（SM-08）も、同じ URL（/manager/periods）の下にある。希望の代理修正（SM-06-1）は、あとからこのクラスへ足す。
+ * 希望の代理修正（SM-06-1）と印刷用シフト表（SM-08）も、同じ URL（/manager/periods）の下にある。
  * </p>
  */
 @Controller
@@ -54,6 +57,7 @@ import lombok.RequiredArgsConstructor;
 public class ManagerPeriodController {
 
     private static final String VIEW = "manager/period";
+    private static final String PROXY_VIEW = "manager/request-proxy";
     private static final String REDIRECT_PREFIX = "redirect:/manager/periods/";
 
     /** セルの指定「ユーザーID:日付:枠ID」（20-SM-06 3.3-1）。枠IDは 1（日勤）か 2（夕勤）。 */
@@ -68,6 +72,7 @@ public class ManagerPeriodController {
 
     private final PeriodService periodService;
     private final AssignmentService assignmentService;
+    private final ShiftRequestService shiftRequestService;
     private final ShiftTableService shiftTableService;
     private final RequiredStaffService requiredStaffService;
     private final Clock clock;
@@ -200,16 +205,73 @@ public class ManagerPeriodController {
         return REDIRECT_PREFIX + id;
     }
 
-    /** セルの指定を正規表現で分ける。null・形式違いは E2601。 */
-    private static Matcher matchCell(String cell) {
-        if (cell == null) {
-            throw new BusinessException("E2601");
+    /**
+     * 希望の代理修正の画面を表示する（20-SM-06-1 3.1）。公開済みの期間は E2612 でシフト作成へ戻す。
+     *
+     * @param id                 期間のID
+     * @param userId             対象のバイトのユーザーID
+     * @param model              画面に渡す値
+     * @param redirectAttributes リダイレクト先に渡す値
+     * @return テンプレート名、または公開済みのときのリダイレクト先
+     */
+    @GetMapping("/{id}/requests/{userId}")
+    public String proxyForm(@PathVariable Long id, @PathVariable Long userId, Model model,
+            RedirectAttributes redirectAttributes) {
+        try {
+            RequestPageView page = shiftRequestService.getProxyPage(id, userId);
+            model.addAttribute("page", page);
+            model.addAttribute("shiftRequestForm", shiftRequestService.toForm(userId, periodService.getPeriod(id)));
+            addProxyValues(model, userId);
+            return PROXY_VIEW;
+        } catch (BusinessException e) {
+            addError(redirectAttributes, e);
+            return REDIRECT_PREFIX + id;
         }
-        Matcher matcher = CELL_PATTERN.matcher(cell);
-        if (!matcher.matches()) {
-            throw new BusinessException("E2601");
+    }
+
+    /**
+     * 希望を代わりに保存する（20-SM-06-1 3.2）。保存すると提出済みになる。
+     *
+     * @param id                 期間のID
+     * @param userId             対象のバイトのユーザーID
+     * @param form               入力した値
+     * @param bindingResult      入力チェックの結果
+     * @param loginUser          操作した店長
+     * @param model              画面に渡す値
+     * @param redirectAttributes リダイレクト先に渡す値
+     * @return 入力エラーなら代理修正の画面、それ以外はリダイレクト先
+     */
+    @PostMapping("/{id}/requests/{userId}")
+    public String proxySubmit(@PathVariable Long id, @PathVariable Long userId,
+            @Validated @ModelAttribute("shiftRequestForm") ShiftRequestForm form, BindingResult bindingResult,
+            @AuthenticationPrincipal LoginUser loginUser, Model model, RedirectAttributes redirectAttributes) {
+        String proxyUrl = REDIRECT_PREFIX + id + "/requests/" + userId;
+        if (bindingResult.hasErrors()) {
+            try {
+                // 送られたフォームのまま、画面の表示に必要な値だけを入れ直す
+                model.addAttribute("page", shiftRequestService.getProxyPage(id, userId));
+            } catch (BusinessException e) {
+                addError(redirectAttributes, e);
+                return REDIRECT_PREFIX + id;
+            }
+            addProxyValues(model, userId);
+            // 期間の指定が不正なら E1301、それ以外は E1302（どちらも改ざんのときだけ起きる）
+            model.addAttribute("errorMessage", bindingResult.hasFieldErrors("periodId") ? "E1301" : "E1302");
+            return PROXY_VIEW;
         }
-        return matcher;
+        if (!id.equals(form.getPeriodId())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "E1301");
+            return proxyUrl;
+        }
+        try {
+            String staffName = shiftRequestService.proxySubmit(id, userId, form, loginUser.getUserId());
+            redirectAttributes.addFlashAttribute("successMessage", "I2610");
+            redirectAttributes.addFlashAttribute("successArgs", new Object[] { staffName });
+            return REDIRECT_PREFIX + id;
+        } catch (BusinessException e) {
+            addError(redirectAttributes, e);
+            return "E2612".equals(e.getMessageCode()) ? REDIRECT_PREFIX + id : proxyUrl;
+        }
     }
 
     /**
@@ -233,6 +295,23 @@ public class ManagerPeriodController {
         model.addAttribute("eveningSlotId", SlotIds.EVENING);
         model.addAttribute("printedAtLabel", DateTimeUtil.dateTime(LocalDateTime.now(clock)));
         return "manager/print";
+    }
+
+    private void addProxyValues(Model model, Long userId) {
+        model.addAttribute("timeOptions", ShiftTimeUtil.timeSelectOptions());
+        model.addAttribute("staffUserId", userId);
+    }
+
+    /** セルの指定を正規表現で分ける。null・形式違いは E2601。 */
+    private static Matcher matchCell(String cell) {
+        if (cell == null) {
+            throw new BusinessException("E2601");
+        }
+        Matcher matcher = CELL_PATTERN.matcher(cell);
+        if (!matcher.matches()) {
+            throw new BusinessException("E2601");
+        }
+        return matcher;
     }
 
     /** 業務のエラーを、リダイレクト先で出すエラーにする。 */
