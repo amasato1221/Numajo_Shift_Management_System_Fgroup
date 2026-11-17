@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,7 +75,9 @@ class StaffSettingControllerTests {
     void setUp() {
         notificationSettingService = mock(NotificationSettingService.class);
         calendarFeedService = mock(CalendarFeedService.class);
-        mvc = MockMvcBuilders.standaloneSetup(new StaffSettingController(notificationSettingService, calendarFeedService))
+        StaffSettingController controller = new StaffSettingController(notificationSettingService,
+                calendarFeedService);
+        mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
         User u = new User();
@@ -169,8 +172,8 @@ class StaffSettingControllerTests {
                 .andExpect(flash().attribute("errorMessage", "E1501"))
                 .andReturn();
 
-        assertThat((java.util.Map<String, Object>) result.getFlashMap()).doesNotContainKeys("successMessage", "warningMessage")
-                .containsKey("errorArgs");
+        Map<String, Object> flash = result.getFlashMap();
+        assertThat(flash).doesNotContainKeys("successMessage", "warningMessage").containsKey("errorArgs");
         verify(notificationSettingService).save(USER_ID, List.of(2));
     }
 
