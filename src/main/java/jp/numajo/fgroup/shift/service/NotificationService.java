@@ -1,7 +1,10 @@
 package jp.numajo.fgroup.shift.service;
 
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
@@ -9,6 +12,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import jp.numajo.fgroup.shift.constant.NotificationType;
+import jp.numajo.fgroup.shift.constant.PeriodStatus;
 import jp.numajo.fgroup.shift.constant.Role;
 import jp.numajo.fgroup.shift.dto.NoticeRow;
 import jp.numajo.fgroup.shift.entity.Notification;
@@ -17,6 +21,9 @@ import jp.numajo.fgroup.shift.entity.ShiftPeriod;
 import jp.numajo.fgroup.shift.entity.User;
 import jp.numajo.fgroup.shift.exception.ResourceNotFoundException;
 import jp.numajo.fgroup.shift.repository.NotificationRepository;
+import jp.numajo.fgroup.shift.repository.NotificationSettingRepository;
+import jp.numajo.fgroup.shift.repository.RequestSubmissionRepository;
+import jp.numajo.fgroup.shift.repository.ShiftPeriodRepository;
 import jp.numajo.fgroup.shift.repository.UserRepository;
 import jp.numajo.fgroup.shift.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +33,7 @@ import lombok.RequiredArgsConstructor;
  *
  * <p>
  * ④b ではヘッダーの未読数と、ほかの Service が呼ぶ notify で始まるメソッドだけを作る。
- * 一覧・既読・締切のお知らせ（SC-02・SB-01・BT-03）は、その画面と一緒に足す。
+ * 一覧・既読（SC-02・SB-01）は、その画面と一緒に足す。締切のお知らせ（BT-03）は sendDeadlineReminders。
  * </p>
  */
 @Service
@@ -48,6 +55,9 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final MessageSource messageSource;
+    private final ShiftPeriodRepository shiftPeriodRepository;
+    private final NotificationSettingRepository notificationSettingRepository;
+    private final RequestSubmissionRepository requestSubmissionRepository;
 
     /** 自分の未読のお知らせ数（ヘッダー）。 */
     public long countUnread(Long userId) {
@@ -138,6 +148,57 @@ public class NotificationService {
         create(staff, NotificationType.CHAT, title, shortBody, "/staff/chat");
     }
 
+    /**
+     * 締切が近い人へ DEADLINE のお知らせを作る（BT-03。95_通知・定期処理設計書 4章）。
+     *
+     * <p>
+     * 期限まで 0・1・3・7 日のそれぞれについて、その日が期限の受付中の期間を探し、
+     * その日数を選んでいる有効なバイトのうち、未提出で、今日まだ同じお知らせを受け取っていない人に1件ずつ作る。
+     * </p>
+     *
+     * @param today 今日（scheduler が LocalDate.now(clock) を渡す）
+     * @return 作ったお知らせの件数
+     */
+    @Transactional
+    public int sendDeadlineReminders(LocalDate today) {
+        int count = 0;
+        String title = message("N0001");
+        for (Integer d : NotificationSettingService.DAYS_OPTIONS) {
+            LocalDate target = today.plusDays(d);
+            List<ShiftPeriod> periods = shiftPeriodRepository.findByStatusAndDeadlineAtBetween(PeriodStatus.OPEN,
+                    target.atStartOfDay(), target.atTime(23, 59, 59));
+            if (periods.isEmpty()) {
+                continue;
+            }
+            List<Long> userIds = notificationSettingRepository.findUserIdsByDaysBefore(d.byteValue());
+            if (userIds.isEmpty()) {
+                continue;
+            }
+            List<User> staffs = userRepository.findAllById(userIds).stream()
+                    .filter(u -> u.getRole() == Role.STAFF && u.isActive())
+                    .sorted(Comparator.comparing(User::getId))
+                    .toList();
+            for (ShiftPeriod period : periods) {
+                Set<Long> submitted = Set.copyOf(requestSubmissionRepository.findUserIdsByPeriodId(period.getId()));
+                String linkUrl = requestsUrl(period);
+                String body = message("N1001", DateTimeUtil.period(period.getStartDate(), period.getEndDate()),
+                        DateTimeUtil.dateTime(period.getDeadlineAt()));
+                for (User staff : staffs) {
+                    if (submitted.contains(staff.getId())) {
+                        continue;
+                    }
+                    if (notificationRepository.existsByUserIdAndTypeAndLinkUrlAndCreatedAtGreaterThanEqual(
+                            staff.getId(), NotificationType.DEADLINE, linkUrl, today.atStartOfDay())) {
+                        continue;
+                    }
+                    create(staff, NotificationType.DEADLINE, title, body, linkUrl);
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
     /** お知らせを1件作る。件名は100文字、本文は500文字で切る（95 5章）。 */
     private void create(User to, NotificationType type, String title, String body, String linkUrl) {
         Notification n = new Notification();
@@ -164,6 +225,11 @@ public class NotificationService {
 
     private static String shiftsUrl(ShiftPeriod period) {
         return "/staff/shifts?periodId=" + period.getId();
+    }
+
+    /** 希望提出の画面へのリンク（DEADLINE。95 1.2）。 */
+    private static String requestsUrl(ShiftPeriod period) {
+        return "/staff/requests?periodId=" + period.getId();
     }
 
     /** max 文字を超えたら切る。null は null。 */
