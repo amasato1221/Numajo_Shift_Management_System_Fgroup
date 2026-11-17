@@ -29,8 +29,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import jp.numajo.fgroup.shift.constant.Availability;
+import jp.numajo.fgroup.shift.constant.OperationAction;
 import jp.numajo.fgroup.shift.constant.PeriodStatus;
 import jp.numajo.fgroup.shift.constant.RequestMode;
+import jp.numajo.fgroup.shift.constant.Role;
 import jp.numajo.fgroup.shift.constant.SubmissionState;
 import jp.numajo.fgroup.shift.dto.RequestPageView;
 import jp.numajo.fgroup.shift.entity.RequestSubmission;
@@ -102,6 +104,8 @@ class ShiftRequestServiceTests {
     private SlotRepository slotRepository;
     @Mock
     private PeriodService periodService;
+    @Mock
+    private OperationLogService operationLogService;
 
     private ShiftRequestService service;
     private ShiftPeriod period;
@@ -113,7 +117,7 @@ class ShiftRequestServiceTests {
         ZoneId zone = ZoneId.of("Asia/Tokyo");
         Clock clock = Clock.fixed(NOW.atZone(zone).toInstant(), zone);
         service = new ShiftRequestService(shiftPeriodRepository, shiftRequestRepository,
-                requestSubmissionRepository, userRepository, slotRepository, periodService, clock);
+                requestSubmissionRepository, userRepository, slotRepository, periodService, operationLogService, clock);
         period = period(1L, D1, D3, LocalDateTime.of(2099, 10, 15, 23, 59, 59), PeriodStatus.OPEN);
         daySlot = slot(1, "日勤", LocalTime.of(8, 0), LocalTime.of(17, 0));
         eveningSlot = slot(2, "夕勤", LocalTime.of(17, 0), LocalTime.of(22, 0));
@@ -153,6 +157,12 @@ class ShiftRequestServiceTests {
         u.setId(USER_ID);
         u.setName("山田 太郎");
         u.setSkills(new HashSet<>(Set.of(skills)));
+        return u;
+    }
+
+    private User staff() {
+        User u = user();
+        u.setRole(Role.STAFF);
         return u;
     }
 
@@ -955,5 +965,179 @@ class ShiftRequestServiceTests {
         when(periodService.getPeriod(99L)).thenThrow(new ResourceNotFoundException("期間がない"));
 
         assertThatThrownBy(() -> service.cancel(USER_ID, 99L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // ===== 代理修正（SM-06-1）=====
+
+    private void givenProxy(PeriodStatus status) {
+        period.setStatus(status);
+        when(periodService.getPeriod(1L)).thenReturn(period);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(staff()));
+    }
+
+    private void givenProxySaveable(PeriodStatus status) {
+        givenProxy(status);
+        givenSlots();
+        when(slotRepository.getReferenceById((byte) 1)).thenReturn(daySlot);
+        when(slotRepository.getReferenceById((byte) 2)).thenReturn(eveningSlot);
+        when(requestSubmissionRepository.findById(new RequestSubmissionId(1L, USER_ID)))
+                .thenReturn(Optional.empty());
+    }
+
+    @Test
+    void getProxyPage_受付中でも受付終了でも入力できる画面を返す() {
+        for (PeriodStatus status : List.of(PeriodStatus.OPEN, PeriodStatus.CLOSED)) {
+            givenProxy(status);
+            givenSlots();
+            when(requestSubmissionRepository.findById(new RequestSubmissionId(1L, USER_ID)))
+                    .thenReturn(Optional.empty());
+
+            RequestPageView actual = service.getProxyPage(1L, USER_ID);
+
+            assertThat(actual.editable()).isTrue();
+            assertThat(actual.staffName()).isEqualTo("山田 太郎");
+            assertThat(actual.statusLabel()).isEqualTo("未提出");
+            assertThat(actual.periodOptions()).isEmpty();
+        }
+    }
+
+    @Test
+    void getProxyPage_提出済みなら提出日時の文字も返す() {
+        givenProxy(PeriodStatus.CLOSED);
+        givenSlots();
+        RequestSubmission submission = new RequestSubmission();
+        submission.setSubmittedAt(NOW.minusDays(1));
+        when(requestSubmissionRepository.findById(new RequestSubmissionId(1L, USER_ID)))
+                .thenReturn(Optional.of(submission));
+
+        RequestPageView actual = service.getProxyPage(1L, USER_ID);
+
+        assertThat(actual.statusLabel()).isEqualTo("提出済み");
+        assertThat(actual.submittedAtLabel()).isEqualTo("2099/10/09 10:00");
+    }
+
+    @Test
+    void getProxyPage_公開済みならE2612() {
+        givenProxy(PeriodStatus.PUBLISHED);
+
+        assertThatThrownBy(() -> service.getProxyPage(1L, USER_ID)).isInstanceOf(BusinessException.class)
+                .extracting("messageCode").isEqualTo("E2612");
+    }
+
+    @Test
+    void getProxyPage_店長や管理者のIDは404() {
+        for (Role role : List.of(Role.MANAGER, Role.ADMIN)) {
+            User other = staff();
+            other.setRole(role);
+            when(periodService.getPeriod(1L)).thenReturn(period);
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(other));
+
+            assertThatThrownBy(() -> service.getProxyPage(1L, USER_ID))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+    }
+
+    @Test
+    void getProxyPage_ユーザーがいなければ404() {
+        when(periodService.getPeriod(1L)).thenReturn(period);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getProxyPage(1L, USER_ID)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void getProxyPage_存在しない期間は404() {
+        when(periodService.getPeriod(1L)).thenThrow(new ResourceNotFoundException("期間がない"));
+
+        assertThatThrownBy(() -> service.getProxyPage(1L, USER_ID)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void proxySubmit_受付中でも受付終了でも保存できて提出済みになる() {
+        for (PeriodStatus status : List.of(PeriodStatus.OPEN, PeriodStatus.CLOSED)) {
+            givenProxySaveable(status);
+
+            String name = service.proxySubmit(1L, USER_ID, form(allOk()), 9L);
+
+            assertThat(name).isEqualTo("山田 太郎");
+        }
+        verify(shiftRequestRepository, org.mockito.Mockito.times(2)).deleteByPeriodIdAndUserId(1L, USER_ID);
+        verify(requestSubmissionRepository, org.mockito.Mockito.times(2)).save(any(RequestSubmission.class));
+    }
+
+    @Test
+    void proxySubmit_前の希望を消してから入れて提出日時を今にする() {
+        givenProxySaveable(PeriodStatus.CLOSED);
+
+        service.proxySubmit(1L, USER_ID, form(allOk()), 9L);
+
+        InOrder order = inOrder(shiftRequestRepository);
+        order.verify(shiftRequestRepository).deleteByPeriodIdAndUserId(1L, USER_ID);
+        order.verify(shiftRequestRepository).saveAll(any());
+        ArgumentCaptor<RequestSubmission> captor = ArgumentCaptor.forClass(RequestSubmission.class);
+        verify(requestSubmissionRepository).save(captor.capture());
+        assertThat(captor.getValue().getId()).isEqualTo(new RequestSubmissionId(1L, USER_ID));
+        assertThat(captor.getValue().getSubmittedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void proxySubmit_操作ログを残す() {
+        givenProxySaveable(PeriodStatus.OPEN);
+
+        service.proxySubmit(1L, USER_ID, form(allOk()), 9L);
+
+        verify(operationLogService).record(9L, OperationAction.REQUEST_PROXY_UPDATE, "user:5", "period=1");
+    }
+
+    @Test
+    void proxySubmit_公開済みならE2612で何も変えない() {
+        givenProxy(PeriodStatus.PUBLISHED);
+
+        assertThatThrownBy(() -> service.proxySubmit(1L, USER_ID, form(allOk()), 9L))
+                .isInstanceOf(BusinessException.class).extracting("messageCode").isEqualTo("E2612");
+
+        verify(shiftRequestRepository, never()).deleteByPeriodIdAndUserId(any(), any());
+        verify(requestSubmissionRepository, never()).save(any());
+        verify(operationLogService, never()).record(any(), any(), any(), any());
+    }
+
+    @Test
+    void proxySubmit_店長や管理者のIDは404で何も変えない() {
+        User manager = staff();
+        manager.setRole(Role.MANAGER);
+        when(periodService.getPeriod(1L)).thenReturn(period);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(manager));
+
+        assertThatThrownBy(() -> service.proxySubmit(1L, USER_ID, form(allOk()), 9L))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(shiftRequestRepository, never()).deleteByPeriodIdAndUserId(any(), any());
+        verify(operationLogService, never()).record(any(), any(), any(), any());
+    }
+
+    @Test
+    void proxySubmit_職能のない枠に値があればE1302で何も変えない() {
+        when(periodService.getPeriod(1L)).thenReturn(period);
+        Slot evening = slot(2, "夕勤", LocalTime.of(17, 0), LocalTime.of(22, 0), skill(2));
+        when(slotRepository.findAllWithRequiredSkills()).thenReturn(List.of(daySlot, evening));
+        // 夕勤の職能（2）を持たないバイトに、夕勤の値が入っている
+        User noSkill = staff();
+        noSkill.setSkills(new HashSet<>(Set.of(skill(1))));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(noSkill));
+
+        assertThatThrownBy(() -> service.proxySubmit(1L, USER_ID, form(allOk()), 9L))
+                .isInstanceOf(BusinessException.class).extracting("messageCode").isEqualTo("E1302");
+
+        verify(shiftRequestRepository, never()).deleteByPeriodIdAndUserId(any(), any());
+        verify(requestSubmissionRepository, never()).save(any());
+        verify(operationLogService, never()).record(any(), any(), any(), any());
+    }
+
+    @Test
+    void proxySubmit_存在しない期間は404() {
+        when(periodService.getPeriod(1L)).thenThrow(new ResourceNotFoundException("期間がない"));
+
+        assertThatThrownBy(() -> service.proxySubmit(1L, USER_ID, form(allOk()), 9L))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

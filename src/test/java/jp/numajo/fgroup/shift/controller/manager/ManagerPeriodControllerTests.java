@@ -33,12 +33,16 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import jp.numajo.fgroup.shift.constant.Role;
 import jp.numajo.fgroup.shift.dto.PeriodPageView;
 import jp.numajo.fgroup.shift.dto.PublishResult;
+import jp.numajo.fgroup.shift.dto.RequestPageView;
 import jp.numajo.fgroup.shift.entity.ShiftPeriod;
 import jp.numajo.fgroup.shift.entity.User;
 import jp.numajo.fgroup.shift.exception.BusinessException;
+import jp.numajo.fgroup.shift.exception.ResourceNotFoundException;
+import jp.numajo.fgroup.shift.form.ShiftRequestForm;
 import jp.numajo.fgroup.shift.security.LoginUser;
 import jp.numajo.fgroup.shift.service.AssignmentService;
 import jp.numajo.fgroup.shift.service.PeriodService;
+import jp.numajo.fgroup.shift.service.ShiftRequestService;
 
 /**
  * ManagerPeriodController（SM-06：シフト作成）のテスト（20-SM-06 8章、97_テスト計画書 4.2）。
@@ -60,6 +64,10 @@ import jp.numajo.fgroup.shift.service.PeriodService;
  * deleteAssignment catch BusinessException  | 例外あり：コードをフラッシュ、なし：I2607
  * publish   catch BusinessException         | 例外あり：コードをフラッシュ、なし：I2608
  * publish   result.hasWarnings()            | 真：W2606 も出す、偽：I2608 のみ
+ * proxyForm catch BusinessException         | 例外あり：コードをフラッシュして期間の画面へ、なし：画面を表示
+ * proxySubmit bindingResult.hasErrors()     | 真：E1301（期間）か E1302 で画面を再表示、偽：次へ
+ * proxySubmit periodId が URL と違う        | 真：E1301 をフラッシュして代理修正の画面へ
+ * proxySubmit catch BusinessException       | E2612：期間の画面へ、それ以外：代理修正の画面へ、なし：I2610
  *
  * 組み合わせ表：時間指定の入力のエラー（値が無い／形が違う。20-00 2.2 パターン B：最初のエラーだけ出す）
  * No. | スタッフ | 日付 | 開始 | 終了 | 出すコード
@@ -81,13 +89,16 @@ class ManagerPeriodControllerTests {
 
     private PeriodService periodService;
     private AssignmentService assignmentService;
+    private ShiftRequestService shiftRequestService;
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         periodService = mock(PeriodService.class);
         assignmentService = mock(AssignmentService.class);
-        mvc = MockMvcBuilders.standaloneSetup(new ManagerPeriodController(periodService, assignmentService))
+        shiftRequestService = mock(ShiftRequestService.class);
+        mvc = MockMvcBuilders.standaloneSetup(new ManagerPeriodController(periodService, assignmentService,
+                shiftRequestService))
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .setViewResolvers(new InternalResourceViewResolver("/templates/", ".html"))
                 .build();
@@ -344,5 +355,126 @@ class ManagerPeriodControllerTests {
                 .andExpect(redirectedUrl("/manager/periods/1"))
                 .andExpect(flash().attribute("errorMessage", "E2611"))
                 .andExpect(flash().attribute("errorArgs", new Object[] { 2L }));
+    }
+
+    // ---------------------------------------------------------------- 希望の代理修正（SM-06-1）
+
+    private RequestPageView proxyPage() {
+        return new RequestPageView(null, List.of(), null, true, null, null, null, null, List.of(), "山田 太郎");
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder proxyPost() {
+        return post("/manager/periods/1/requests/5").param("periodId", "1")
+                .param("days[0].workDate", "2099-11-02").param("days[0].mode", "SLOT");
+    }
+
+    @Test
+    void 代理修正の画面を表示する_ページとフォームと時刻の選択肢と対象のIDを持つ() throws Exception {
+        RequestPageView page = proxyPage();
+        ShiftRequestForm form = new ShiftRequestForm();
+        ShiftPeriod period = new ShiftPeriod();
+        when(shiftRequestService.getProxyPage(1L, 5L)).thenReturn(page);
+        when(periodService.getPeriod(1L)).thenReturn(period);
+        when(shiftRequestService.toForm(5L, period)).thenReturn(form);
+
+        mvc.perform(get("/manager/periods/1/requests/5"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("manager/request-proxy"))
+                .andExpect(model().attribute("page", page))
+                .andExpect(model().attribute("shiftRequestForm", form))
+                .andExpect(model().attribute("staffUserId", 5L))
+                .andExpect(model().attributeExists("timeOptions"));
+    }
+
+    @Test
+    void 代理修正の画面が公開済みならE2612を出してシフト作成へ戻る() throws Exception {
+        when(shiftRequestService.getProxyPage(1L, 5L)).thenThrow(new BusinessException("E2612"));
+
+        mvc.perform(get("/manager/periods/1/requests/5"))
+                .andExpect(redirectedUrl("/manager/periods/1"))
+                .andExpect(flash().attribute("errorMessage", "E2612"));
+    }
+
+    @Test
+    void 代理修正の画面で対象がバイトでなければ404() throws Exception {
+        when(shiftRequestService.getProxyPage(1L, 5L)).thenThrow(new ResourceNotFoundException("なし"));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> mvc.perform(get("/manager/periods/1/requests/5")))
+                .hasRootCauseInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void 代理修正で保存するとI2610を氏名つきで出して期間の画面へ戻る() throws Exception {
+        when(shiftRequestService.proxySubmit(eq(1L), eq(5L), any(ShiftRequestForm.class), eq(9L)))
+                .thenReturn("山田 太郎");
+
+        mvc.perform(proxyPost())
+                .andExpect(redirectedUrl("/manager/periods/1"))
+                .andExpect(flash().attribute("successMessage", "I2610"))
+                .andExpect(flash().attribute("successArgs", new Object[] { "山田 太郎" }));
+    }
+
+    @Test
+    void 代理修正でURLの期間と違う期間が送られたらE1301でサービスを呼ばない() throws Exception {
+        mvc.perform(post("/manager/periods/1/requests/5").param("periodId", "2")
+                .param("days[0].workDate", "2099-11-02").param("days[0].mode", "SLOT"))
+                .andExpect(redirectedUrl("/manager/periods/1/requests/5"))
+                .andExpect(flash().attribute("errorMessage", "E1301"));
+
+        verify(shiftRequestService, never()).proxySubmit(anyLong(), anyLong(), any(), anyLong());
+    }
+
+    @Test
+    void 代理修正で期間が無ければE1301で画面を出し直す() throws Exception {
+        when(shiftRequestService.getProxyPage(1L, 5L)).thenReturn(proxyPage());
+
+        mvc.perform(post("/manager/periods/1/requests/5").param("days[0].workDate", "2099-11-02")
+                .param("days[0].mode", "SLOT"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("manager/request-proxy"))
+                .andExpect(model().attribute("errorMessage", "E1301"))
+                .andExpect(model().attribute("staffUserId", 5L))
+                .andExpect(model().attributeExists("page", "timeOptions"));
+
+        verify(shiftRequestService, never()).proxySubmit(anyLong(), anyLong(), any(), anyLong());
+    }
+
+    @Test
+    void 代理修正で日ごとの値が無ければE1302で画面を出し直す() throws Exception {
+        when(shiftRequestService.getProxyPage(1L, 5L)).thenReturn(proxyPage());
+
+        mvc.perform(post("/manager/periods/1/requests/5").param("periodId", "1"))
+                .andExpect(view().name("manager/request-proxy"))
+                .andExpect(model().attribute("errorMessage", "E1302"));
+    }
+
+    @Test
+    void 代理修正で入力エラーかつ公開済みならE2612で期間の画面へ戻る() throws Exception {
+        when(shiftRequestService.getProxyPage(1L, 5L)).thenThrow(new BusinessException("E2612"));
+
+        mvc.perform(post("/manager/periods/1/requests/5").param("periodId", "1"))
+                .andExpect(redirectedUrl("/manager/periods/1"))
+                .andExpect(flash().attribute("errorMessage", "E2612"));
+    }
+
+    @Test
+    void 代理修正の保存で公開済みならE2612を出して期間の画面へ戻る() throws Exception {
+        when(shiftRequestService.proxySubmit(eq(1L), eq(5L), any(ShiftRequestForm.class), eq(9L)))
+                .thenThrow(new BusinessException("E2612"));
+
+        mvc.perform(proxyPost())
+                .andExpect(redirectedUrl("/manager/periods/1"))
+                .andExpect(flash().attribute("errorMessage", "E2612"));
+    }
+
+    @Test
+    void 代理修正の保存で入力の誤りなら代理修正の画面へコードと引数を渡して戻る() throws Exception {
+        when(shiftRequestService.proxySubmit(eq(1L), eq(5L), any(ShiftRequestForm.class), eq(9L)))
+                .thenThrow(new BusinessException("E1308", "11月2日(月)", "夕勤"));
+
+        mvc.perform(proxyPost())
+                .andExpect(redirectedUrl("/manager/periods/1/requests/5"))
+                .andExpect(flash().attribute("errorMessage", "E1308"))
+                .andExpect(flash().attribute("errorArgs", new Object[] { "11月2日(月)", "夕勤" }));
     }
 }
