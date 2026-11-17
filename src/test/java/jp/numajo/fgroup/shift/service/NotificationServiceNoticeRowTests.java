@@ -14,6 +14,9 @@ import jp.numajo.fgroup.shift.constant.NotificationType;
 import jp.numajo.fgroup.shift.dto.NoticeRow;
 import jp.numajo.fgroup.shift.entity.Notification;
 import jp.numajo.fgroup.shift.repository.NotificationRepository;
+import jp.numajo.fgroup.shift.repository.NotificationSettingRepository;
+import jp.numajo.fgroup.shift.repository.RequestSubmissionRepository;
+import jp.numajo.fgroup.shift.repository.ShiftPeriodRepository;
 import jp.numajo.fgroup.shift.repository.UserRepository;
 
 /**
@@ -39,7 +42,8 @@ class NotificationServiceNoticeRowTests {
 
     private final NotificationRepository notificationRepository = mock(NotificationRepository.class);
     private final NotificationService service = new NotificationService(notificationRepository,
-            mock(UserRepository.class), mock(MessageSource.class));
+            mock(UserRepository.class), mock(MessageSource.class), mock(ShiftPeriodRepository.class),
+            mock(NotificationSettingRepository.class), mock(RequestSubmissionRepository.class));
 
     private static Notification notification(long id, NotificationType type, String body, LocalDateTime readAt) {
         Notification n = new Notification();
