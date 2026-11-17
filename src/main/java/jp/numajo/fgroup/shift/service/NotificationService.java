@@ -1,5 +1,7 @@
 package jp.numajo.fgroup.shift.service;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 
@@ -25,8 +27,7 @@ import lombok.RequiredArgsConstructor;
  * アプリ内のお知らせ（95_通知・定期処理設計書 1.2・5章）。お知らせを作るのはこのクラスだけ。
  *
  * <p>
- * ④b ではヘッダーの未読数と、ほかの Service が呼ぶ notify で始まるメソッドだけを作る。
- * 一覧・既読・締切のお知らせ（SC-02・SB-01・BT-03）は、その画面と一緒に足す。
+ * ヘッダーの未読数、SB-01・SC-02 の一覧と既読、ほかの Service が呼ぶ notify で始まるメソッドを持つ。
  * </p>
  */
 @Service
@@ -44,10 +45,15 @@ public class NotificationService {
     static final int ROW_BODY_MAX = 100;
     /** 一覧の本文を切ったときに付ける印（20-SC-02 1章 No.2-4） */
     static final String ELLIPSIS = "…";
+    /** 一覧に出す最大件数（20-SC-02 2.1。findTop100… と同じ数） */
+    static final int LIST_LIMIT = 100;
+    /** 移動先が使えないときに戻る先（20-SC-02 2.2-1-3、94 3.4） */
+    static final String NOTICES_URL = "/notices";
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final MessageSource messageSource;
+    private final Clock clock;
 
     /** 自分の未読のお知らせ数（ヘッダー）。 */
     public long countUnread(Long userId) {
@@ -64,6 +70,62 @@ public class NotificationService {
         return notificationRepository.findTop3ByUserIdAndReadAtIsNullOrderByCreatedAtDescIdDesc(userId).stream()
                 .map(NotificationService::toRow)
                 .toList();
+    }
+
+    /**
+     * 自分のお知らせを新しい順に100件（20-SC-02 2.1）。
+     *
+     * @param userId ユーザーID
+     * @param limit  件数（100 だけを使う。30-05 1.2）
+     * @return 一覧の行（0〜100件）
+     * @throws IllegalArgumentException limit が 100 でないとき
+     */
+    public List<NoticeRow> findLatest(Long userId, int limit) {
+        if (limit != LIST_LIMIT) {
+            throw new IllegalArgumentException("limit は " + LIST_LIMIT + " だけを使う: " + limit);
+        }
+        return notificationRepository.findTop100ByUserIdOrderByCreatedAtDescIdDesc(userId).stream()
+                .map(NotificationService::toRow)
+                .toList();
+    }
+
+    /**
+     * お知らせを開く（20-SC-02 2.2）。未読なら既読にし、移動先を返す。
+     *
+     * @param userId         ユーザーID
+     * @param notificationId お知らせID
+     * @return リダイレクト先（link_url。使えないときは /notices）
+     * @throws ResourceNotFoundException 自分のお知らせにないとき（404）
+     */
+    @Transactional
+    public String open(Long userId, Long notificationId) {
+        Notification n = notificationRepository.findByIdAndUserId(notificationId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("notification " + notificationId));
+        if (n.getReadAt() == null) {
+            n.setReadAt(LocalDateTime.now(clock));
+        }
+        return safeLink(n.getLinkUrl());
+    }
+
+    /**
+     * 自分の未読をすべて既読にする（20-SC-02 2.3）。
+     *
+     * @param userId ユーザーID
+     */
+    @Transactional
+    public void readAll(Long userId) {
+        notificationRepository.markAllRead(userId, LocalDateTime.now(clock));
+    }
+
+    /**
+     * 移動先が同じサイトの中か確かめる（20-SC-02 2.2-1-3、94 3.4）。
+     * null・/ で始まらない・// で始まるときは /notices にする（ほかのサイトへ飛ばさないため）。
+     */
+    static String safeLink(String linkUrl) {
+        if (linkUrl == null || !linkUrl.startsWith("/") || linkUrl.startsWith("//")) {
+            return NOTICES_URL;
+        }
+        return linkUrl;
     }
 
     /** お知らせを一覧の1行にする（20-SC-02 2.1-2）。本文は100文字を超えたら切って「…」を付ける。 */

@@ -9,8 +9,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,7 +74,8 @@ class NotificationServiceTests {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
         messageSource.setBasename("messages");
         messageSource.setDefaultEncoding(StandardCharsets.UTF_8.name());
-        service = new NotificationService(notificationRepository, userRepository, messageSource);
+        service = new NotificationService(notificationRepository, userRepository, messageSource,
+                Clock.fixed(Instant.parse("2026-10-16T00:00:00Z"), ZoneId.of("Asia/Tokyo")));
     }
 
     private static User user(long id, String name, Role role) {

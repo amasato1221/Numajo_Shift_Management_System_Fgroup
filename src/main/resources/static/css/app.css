@@ -352,6 +352,57 @@ body {
 
 /* ===== SC-02 お知らせ一覧（新井） ===== */
 
+/* 未読の行・カードは太字 */
+.notice-unread .notice-title,
+.notice-unread .notice-body {
+    font-weight: bold;
+}
+
+/* 本文は改行を <br> にしないので、長い文字列だけ折り返す */
+.notice-body {
+    overflow-wrap: anywhere;
+}
+
+.notices-col-unread {
+    width: 4rem;
+}
+
+.notices-col-type {
+    width: 6rem;
+}
+
+.notices-col-date {
+    width: 10rem;
+}
+
+.notice-date {
+    font-size: 0.875rem;
+    color: var(--bs-secondary-color);
+}
+
+/* 種類のバッジ（20-SC-02 1章）：締切 黄・公開 緑・変更 オレンジ・欠員 赤・チャット 青。
+   黄と青は Bootstrap の色の変数を使う（:root にない色のため） */
+.notice-type-deadline {
+    background-color: var(--bs-warning);
+    color: var(--bs-dark);
+}
+
+.notice-type-published {
+    background-color: var(--color-day);
+}
+
+.notice-type-changed {
+    background-color: var(--color-evening);
+}
+
+.notice-type-vacancy {
+    background-color: var(--color-absent);
+}
+
+.notice-type-chat {
+    background-color: var(--bs-primary);
+}
+
 /* ===== SC-03 アカウント設定（川端） ===== */
 
 /* ===== SB-01 ホーム（新井） ===== */
