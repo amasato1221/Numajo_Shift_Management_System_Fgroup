@@ -17,7 +17,8 @@
            class="list-group-item list-group-item-action chat-list-item">
             <span class="chat-list-initial" th:text="${r.initial}">山</span>
             <span class="chat-list-main">
-                <span class="chat-list-name" th:text="${r.staffName}">山田 太郎</span>
+                <span class="chat-list-name" th:classappend="${r.active} ? 'text-dark' : 'text-muted'"
+                      th:text="${r.staffName}">山田 太郎</span>
                 <span class="chat-list-body" th:if="${r.lastBody != null}" th:text="${r.lastBody}">本文</span>
                 <span class="chat-list-body text-muted" th:if="${r.lastBody == null}"
                       th:text="#{I1601}">まだメッセージはありません。</span>

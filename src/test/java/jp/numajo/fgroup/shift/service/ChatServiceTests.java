@@ -140,6 +140,9 @@ class ChatServiceTests {
 
         assertThat(rows).extracting(ChatListRow::staffId).containsExactly(2L, 1L, 3L, 7L, 4L, 5L, 6L);
         assertThat(rows).extracting(ChatListRow::unreadCount).containsExactly(3L, 1L, 0L, 0L, 0L, 0L, 0L);
+        assertThat(rows).extracting(ChatListRow::active).containsExactly(true, true, true, false, true, true, true);
+        assertThat(rows.get(0).lastAt()).isEqualTo(LocalDateTime.parse("2026-11-16T09:00:00"));
+        assertThat(rows.get(5).lastAt()).isNull();
     }
 
     @Test
@@ -167,6 +170,8 @@ class ChatServiceTests {
 
         assertThat(rows).hasSize(1);
         assertThat(rows.get(0).staffName()).isEqualTo("工藤（無効）");
+        assertThat(rows.get(0).active()).isFalse();
+        assertThat(rows.get(0).lastAt()).isEqualTo(LocalDateTime.parse("2026-11-05T08:00:00"));
         assertThat(rows.get(0).initial()).isEqualTo("工");
     }
 
@@ -179,7 +184,7 @@ class ChatServiceTests {
 
         ChatListRow row = service.getChatList().get(0);
 
-        assertThat(row).isEqualTo(new ChatListRow(5L, "加", "加藤", null, null, 0L));
+        assertThat(row).isEqualTo(new ChatListRow(5L, "加", "加藤", true, null, null, null, 0L));
     }
 
     @Test

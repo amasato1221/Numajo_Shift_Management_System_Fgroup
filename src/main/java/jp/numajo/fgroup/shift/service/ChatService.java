@@ -103,10 +103,10 @@ public class ChatService {
         String name = staff.isActive() ? staff.getName() : staff.getName() + INACTIVE_MARK;
         String initial = staff.getName().substring(0, 1);
         if (last == null) {
-            return new ChatListRow(staff.getId(), initial, name, null, null, unreadCount);
+            return new ChatListRow(staff.getId(), initial, name, staff.isActive(), null, null, null, unreadCount);
         }
-        return new ChatListRow(staff.getId(), initial, name, cutBody(last.getBody()),
-                lastAtLabel(last.getCreatedAt(), today), unreadCount);
+        return new ChatListRow(staff.getId(), initial, name, staff.isActive(), cutBody(last.getBody()),
+                last.getCreatedAt(), lastAtLabel(last.getCreatedAt(), today), unreadCount);
     }
 
     /** 30文字を超えたら30文字で切って「…」を付ける。 */

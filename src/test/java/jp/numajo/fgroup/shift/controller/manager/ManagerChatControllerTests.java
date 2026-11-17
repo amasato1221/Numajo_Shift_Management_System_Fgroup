@@ -97,7 +97,7 @@ class ManagerChatControllerTests {
 
     @Test
     void 一覧_rowsを入れてチャット一覧の画面() throws Exception {
-        List<ChatListRow> rows = List.of(new ChatListRow(5L, "山", "山田 太郎", null, null, 0L));
+        List<ChatListRow> rows = List.of(new ChatListRow(5L, "山", "山田 太郎", true, null, null, null, 0L));
         when(chatService.getChatList()).thenReturn(rows);
 
         mvc.perform(get("/manager/chats"))

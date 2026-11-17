@@ -50,7 +50,7 @@ import lombok.RequiredArgsConstructor;
  *  2  | 店長が送っただけ                             | 未読0（バッジなし）
  *  3  | 別の店長が開いて既読にした                    | 未読0
  *  4  | メッセージがないバイトが2人                    | 「まだメッセージはありません。」、ふりがな順
- *  5  | 無効なバイト：メッセージあり／なし              | 「（無効）」付きで出る／出ない
+ *  5  | 無効なバイト：メッセージあり／なし              | 「（無効）」付きで灰色（text-muted）、有効は黒（text-dark）で出る／出ない
  *  6  | 本文に &lt;b&gt;                           | 文字のまま表示される
  *  7  | 有効なバイトが0人                            | I3001
  * SM-11
@@ -203,6 +203,10 @@ class ManagerChatFlowTests {
         MvcResult result = open("/manager/chats", managerA);
 
         assertThat(row(result, withMsg).staffName()).isEqualTo("有り無効（無効）");
+        assertThat(row(result, withMsg).active()).isFalse();
+        assertThat(html(result)).contains("chat-list-name text-muted\">有り無効（無効）<")
+                .contains("chat-list-name text-dark\">チャット太郎<")
+                .doesNotContain("chat-list-name text-muted\">チャット太郎<");
         assertThat(rows(result)).extracting(ChatListRow::staffId).doesNotContain(noMsg);
     }
 
