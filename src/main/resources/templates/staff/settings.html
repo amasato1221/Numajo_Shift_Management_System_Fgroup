@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='settings'">
+<head>
+    <title>設定</title>
+</head>
+<body>
+    <!--
+      SB-05 設定（通知・カレンダー連携）（20-SB-05）。
+      カード1：締切通知のタイミング。カード2：カレンダーの購読用URL（コピー・iPhone・Macで開く・再発行・登録のしかた）。
+    -->
+    <div layout:fragment="content">
+        <h1 class="h4 mb-4">設定</h1>
+
+        <!-- カード1：締切通知（20-SB-05 1.1） -->
+        <div class="card mb-4">
+            <div class="card-header fw-bold">締切通知</div>
+            <div class="card-body">
+                <p>希望の提出期限が近づいたら、お知らせで知らせます。未提出の期間があるときだけ届きます。</p>
+                <form th:action="@{/staff/settings/notifications}" th:object="${notificationSettingForm}" method="post">
+                    <div class="mb-3">
+                        <div class="form-check form-check-inline" th:each="o : ${dayOptions}">
+                            <input type="checkbox" class="form-check-input" th:field="*{daysBefore}" th:value="${o.value}">
+                            <label class="form-check-label" th:for="${#ids.prev('daysBefore')}" th:text="${o.label}"></label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">保存する</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- カード2：カレンダー連携（20-SB-05 1.2・1.3） -->
+        <div class="card mb-4">
+            <div class="card-header fw-bold">カレンダー連携</div>
+            <div class="card-body">
+                <label for="feedUrl" class="form-label fw-bold">購読用URL</label>
+                <div class="input-group mb-3">
+                    <input type="text" id="feedUrl" class="form-control" th:value="${feedUrl}" readonly>
+                    <button type="button" class="btn btn-outline-secondary" data-copy-target="feedUrl">コピー</button>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <a class="btn btn-outline-primary" th:href="${webcalUrl}">iPhone・Macで開く</a>
+                    <form th:action="@{/staff/settings/calendar/reissue}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-outline-danger" th:data-confirm="#{C1501}">URLを再発行</button>
+                    </form>
+                </div>
+                <details>
+                    <summary>登録のしかた</summary>
+                    <ul class="mt-2 mb-0">
+                        <li><strong>Googleカレンダー：</strong>パソコンで Googleカレンダーを開き、「他のカレンダー」の「＋」→「URLで追加」に購読用URLを貼り付けます。※ このシステムをインターネットに公開していない間は、Googleカレンダーには反映されません。</li>
+                        <li><strong>Appleのカレンダー（iPhone・Mac）：</strong>上の「iPhone・Macで開く」を押し、「照会」（購読）を選びます。iPhoneでは「設定」→「カレンダー」→「アカウント」→「アカウントを追加」→「その他」→「照会するカレンダーを追加」に購読用URLを入れても登録できます。</li>
+                        <li><strong>TimeTree：</strong>TimeTreeのアプリで、上で登録したGoogleカレンダーかiPhoneのカレンダーを表示する設定にします。</li>
+                        <li>反映されるまでの時間は、カレンダーアプリによって数分〜1日かかります。</li>
+                    </ul>
+                </details>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
