@@ -17,8 +17,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import jp.numajo.fgroup.shift.constant.Availability;
+import jp.numajo.fgroup.shift.constant.OperationAction;
 import jp.numajo.fgroup.shift.constant.PeriodStatus;
 import jp.numajo.fgroup.shift.constant.RequestMode;
+import jp.numajo.fgroup.shift.constant.Role;
 import jp.numajo.fgroup.shift.constant.SlotIds;
 import jp.numajo.fgroup.shift.constant.SubmissionState;
 import jp.numajo.fgroup.shift.dto.PeriodOption;
@@ -45,7 +47,7 @@ import jp.numajo.fgroup.shift.util.ShiftTimeUtil;
 import lombok.RequiredArgsConstructor;
 
 /**
- * シフト希望の提出（SB-03）の業務処理。
+ * シフト希望の提出（SB-03）と、店長による希望の代理修正（SM-06-1）の業務処理。
  */
 @Service
 @RequiredArgsConstructor
@@ -58,6 +60,7 @@ public class ShiftRequestService {
     private final UserRepository userRepository;
     private final SlotRepository slotRepository;
     private final PeriodService periodService;
+    private final OperationLogService operationLogService;
     private final Clock clock;
 
     /**
@@ -75,6 +78,28 @@ public class ShiftRequestService {
         }
         User user = findUser(userId);
         boolean editable = periodService.isAcceptingRequests(period);
+        return toPageView(period, user, editable, findOptions(period));
+    }
+
+    /**
+     * 代理修正画面の表示用の値を作る（20-SM-06-1 3.1）。入力できるかは常に true（期限は見ない）。
+     *
+     * @param periodId    期間のID
+     * @param staffUserId 対象のバイトのユーザーID
+     * @return 表示用の値（期間のプルダウンはないので periodOptions は空）
+     * @throws ResourceNotFoundException 期間がない、またはユーザーがいない・バイトでないとき
+     * @throws BusinessException         公開済みの期間（E2612）
+     */
+    public RequestPageView getProxyPage(Long periodId, Long staffUserId) {
+        ShiftPeriod period = periodService.getPeriod(periodId);
+        User staff = findStaff(staffUserId);
+        checkProxyEditable(period);
+        return toPageView(period, staff, true, List.of());
+    }
+
+    private RequestPageView toPageView(ShiftPeriod period, User user, boolean editable,
+            List<PeriodOption> periodOptions) {
+        Long userId = user.getId();
         LocalDateTime submittedAt = requestSubmissionRepository
                 .findById(new RequestSubmissionId(period.getId(), userId))
                 .map(RequestSubmission::getSubmittedAt)
@@ -86,7 +111,7 @@ public class ShiftRequestService {
                         qualified.contains(SlotIds.EVENING)))
                 .toList();
 
-        return new RequestPageView(PeriodService.toOption(period), findOptions(period),
+        return new RequestPageView(PeriodService.toOption(period), periodOptions,
                 DateTimeUtil.dateTime(period.getDeadlineAt()), editable, submittedAt, labelOf(submittedAt), state,
                 state.getLabel(), days, user.getName());
     }
@@ -128,8 +153,38 @@ public class ShiftRequestService {
         validateDays(period, form.getDays(), qualifiedSlotIds(userId));
 
         replaceRequests(period, userId, form.getDays());
+        saveSubmission(period.getId(), userId);
+    }
 
-        RequestSubmissionId id = new RequestSubmissionId(period.getId(), userId);
+    /**
+     * 店長が代わりに希望を直す（20-SM-06-1 3.2）。期限は見ない。直すと提出済みになる。
+     * すでにある割当は変えない。本人へのお知らせも送らない。
+     *
+     * @param periodId    期間のID
+     * @param staffUserId 対象のバイトのユーザーID
+     * @param form        入力した値
+     * @param operatorId  操作した店長のユーザーID
+     * @return 対象のバイトの氏名（完了のメッセージ I2610 に使う）
+     * @throws ResourceNotFoundException 期間がない、またはユーザーがいない・バイトでないとき
+     * @throws BusinessException         公開済みの期間（E2612）、入力の誤り（E1302、E1304〜E1308）
+     */
+    @Transactional
+    public String proxySubmit(Long periodId, Long staffUserId, ShiftRequestForm form, Long operatorId) {
+        ShiftPeriod period = periodService.getPeriod(periodId);
+        User staff = findStaff(staffUserId);
+        checkProxyEditable(period);
+        validateDays(period, form.getDays(), qualifiedSlotIds(staffUserId));
+
+        replaceRequests(period, staffUserId, form.getDays());
+        saveSubmission(period.getId(), staffUserId);
+        operationLogService.record(operatorId, OperationAction.REQUEST_PROXY_UPDATE, "user:" + staffUserId,
+                "period=" + periodId);
+        return staff.getName();
+    }
+
+    /** 提出状況を今の日時で入れる（なければ作る）。 */
+    private void saveSubmission(Long periodId, Long userId) {
+        RequestSubmissionId id = new RequestSubmissionId(periodId, userId);
         RequestSubmission submission = requestSubmissionRepository.findById(id).orElseGet(() -> {
             RequestSubmission created = new RequestSubmission();
             created.setId(id);
@@ -137,6 +192,13 @@ public class ShiftRequestService {
         });
         submission.setSubmittedAt(LocalDateTime.now(clock));
         requestSubmissionRepository.save(submission);
+    }
+
+    /** 代理修正できる期間か。公開済みは E2612。 */
+    private void checkProxyEditable(ShiftPeriod period) {
+        if (period.getStatus() == PeriodStatus.PUBLISHED) {
+            throw new BusinessException("E2612");
+        }
     }
 
     /**
@@ -372,6 +434,15 @@ public class ShiftRequestService {
 
     private List<LocalDate> datesOf(ShiftPeriod period) {
         return period.getStartDate().datesUntil(period.getEndDate().plusDays(1)).toList();
+    }
+
+    /** 対象のバイトを探す。いない・バイトでない（店長・管理者）なら 404。 */
+    private User findStaff(Long userId) {
+        User user = findUser(userId);
+        if (user.getRole() != Role.STAFF) {
+            throw new ResourceNotFoundException("Staff not found. id=" + userId);
+        }
+        return user;
     }
 
     private User findUser(Long userId) {

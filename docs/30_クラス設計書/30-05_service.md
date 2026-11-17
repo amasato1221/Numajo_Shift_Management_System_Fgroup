@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-05 |
-| 版 | 第1.8版（令和8年11月9日） |
+| 版 | 第1.9版（令和8年11月11日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -19,6 +19,7 @@
 | 1.6 | 令和8年11月9日 | 0章に「日付の表示」の決まりを足した（10_基本設計書 5.3 第1.4版）。toOption で periodLabel・deadlineLabel・deadlineShortLabel も入れることを書いた | 新井 |
 | 1.7 | 令和8年11月9日 | SM-06 の実装（PR #57）に合わせた：3.6 に AssignmentService#findStaffOptions、3.7 に ShiftWarningService の covers・isTraineeOnly・BY_KANA（package-private）を足した | 新井 |
 | 1.8 | 令和8年11月9日 | 日付の表示の直し（PR #60）に合わせた：2.3 に ShiftTableService#toDayColumn（static）を足した | 新井 |
+| 1.9 | 令和8年11月11日 | コードと設計書の再チェックを反映：1.3 NotificationSettingService の依存から使っていない UserRepository を外し、save は null の値も E1501 にすると書いた（PR #27）。2.3 ShiftTableService の依存に ShiftPeriodRepository・Clock、メソッドに findPublishedPeriods・choosePeriod を足した（PR #50。Controller が Repository を直接呼ばないため） | 新井 |
 
 ## 0. service の決まり
 
@@ -70,14 +71,14 @@
 
 ### 1.3 `NotificationSettingService`
 
-依存：`NotificationSettingRepository`、`UserRepository`
+依存：`NotificationSettingRepository`
 
 | メソッド・定数 | Tx | 内容・手順 |
 | --- | --- | --- |
 | `static final List<Integer> DAYS_OPTIONS = List.of(0, 1, 3, 7)` | － | 選択肢 |
 | `static final List<Integer> DEFAULT_DAYS = List.of(1, 3)` | － | 既定値 |
 | `List<Integer> findDays(Long userId)` | 読取 | 20-SB-05 2.1 |
-| `void save(Long userId, List<Integer> daysBefore)` | 更新 | 20-SB-05 2.2 |
+| `void save(Long userId, List<Integer> daysBefore)` | 更新 | 20-SB-05 2.2（0・1・3・7 以外の値と null の値は E1501） |
 | `void createDefault(Long userId)` | 必須 | 20-SM-03 2.2-6 |
 
 ### 1.4 `CalendarFeedService`
@@ -118,10 +119,12 @@
 
 ### 2.3 `ShiftTableService`
 
-依存：`ShiftAssignmentRepository`、`UserRepository`、`SlotRepository`
+依存：`ShiftAssignmentRepository`、`UserRepository`、`SlotRepository`、`ShiftPeriodRepository`、`Clock`
 
 | メソッド | Tx | 手順 |
 | --- | --- | --- |
+| `List<ShiftPeriod> findPublishedPeriods()` | 読取 | 20-SB-04 2.1-2（公開済みで、開始日が今日の3か月前の1日以降。新しい順） |
+| `ShiftPeriod choosePeriod(List<ShiftPeriod> periods, Long periodId)` | 読取 | 20-SB-04 2.1-3。`periodId` が選択肢にない → `ResourceNotFoundException`。選択肢が0件 → null を返す |
 | `ShiftTable build(ShiftPeriod period, boolean includeAbsent)` | 読取 | 20-SB-04 2.1-4、20-SM-08 3.1 |
 | `Map<LocalDate, Map<Byte, Integer>> slotCounts(ShiftTable table)` | － | 20-SM-08 3.1-3（ASSIGNED だけを、重なる枠ごとに数える） |
 | `static DayColumn toDayColumn(LocalDate date)` | － | 表の日付の列（30-07 `DayColumn`）を作る。`dateLabel`＝`DateTimeUtil.shortDate`、`dayLabel`＝`day`、`dayOfWeekLabel`＝`dayOfWeek`、`dateWithDayLabel`＝`shortDateWithDay`。`build` の `days` と、SM-06 の `AssignmentService`（`AssignmentMatrix.days`）で使う |
