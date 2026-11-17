@@ -311,6 +311,56 @@ body {
     color: #6C757D;
 }
 
+/* チャット一覧（SM-10） */
+.chat-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.chat-list-initial {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 50%;
+    text-align: center;
+    font-weight: bold;
+    color: #FFFFFF;
+    background-color: var(--color-admin);
+}
+
+.chat-list-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-list-name {
+    font-weight: bold;
+}
+
+.chat-list-body {
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-list-side {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.chat-list-time {
+    font-size: 0.75rem;
+    color: #6C757D;
+}
+
 /* タブレット（768〜1023px）：メニューの幅 180px */
 @media (min-width: 768px) {
     .app-menu {

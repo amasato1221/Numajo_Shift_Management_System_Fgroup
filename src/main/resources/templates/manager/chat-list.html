@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='chats'">
+<head>
+    <title>チャット</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <h1 class="h4 mb-3">チャット</h1>
+
+    <p th:if="${#lists.isEmpty(rows)}" th:text="#{I3001}">バイトが登録されていません。</p>
+
+    <div class="list-group" th:unless="${#lists.isEmpty(rows)}">
+        <a th:each="r : ${rows}" th:href="@{/manager/chats/{id}(id=${r.staffId})}"
+           class="list-group-item list-group-item-action chat-list-item">
+            <span class="chat-list-initial" th:text="${r.initial}">山</span>
+            <span class="chat-list-main">
+                <span class="chat-list-name" th:classappend="${r.active} ? 'text-dark' : 'text-muted'"
+                      th:text="${r.staffName}">山田 太郎</span>
+                <span class="chat-list-body" th:if="${r.lastBody != null}" th:text="${r.lastBody}">本文</span>
+                <span class="chat-list-body text-muted" th:if="${r.lastBody == null}"
+                      th:text="#{I1601}">まだメッセージはありません。</span>
+            </span>
+            <span class="chat-list-side">
+                <span class="chat-list-time" th:if="${r.lastAtLabel != null}" th:text="${r.lastAtLabel}">10/15</span>
+                <span class="badge rounded-pill bg-danger" th:if="${r.unreadCount > 0}"
+                      th:text="${r.unreadCount}">3</span>
+            </span>
+        </a>
+    </div>
+</div>
+</body>
+</html>
