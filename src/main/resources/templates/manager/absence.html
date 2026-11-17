@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='absences'">
+<head>
+    <title>欠勤登録</title>
+</head>
+<body>
+    <main layout:fragment="content">
+        <h1 class="h4 mb-4">欠勤登録</h1>
+
+        <!-- ② 内容を確かめて登録する（20-SM-07 1.2）。割当を選んだときだけ出す -->
+        <th:block th:if="${target != null}">
+            <form th:action="@{/manager/absences}" th:object="${absenceForm}" method="post">
+                <input type="hidden" th:field="*{assignmentId}">
+
+                <div class="card mb-4">
+                    <div class="card-header fw-bold">欠勤にする人</div>
+                    <div class="card-body">
+                        <p class="fs-5 mb-0" th:text="${target.targetLabel}">
+                            10月24日(土) ☀日勤 8:00〜17:00　山田 太郎</p>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="reason" class="form-label fw-bold">理由（任意）</label>
+                    <input type="text" id="reason" th:field="*{reason}" class="form-control" placeholder="例：体調不良">
+                    <div class="text-danger small" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="noticeMessage" class="form-label fw-bold">通知する文</label>
+                    <textarea id="noticeMessage" th:field="*{noticeMessage}" rows="3" class="form-control"></textarea>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('noticeMessage')}"
+                         th:errors="*{noticeMessage}"></div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header fw-bold">通知する相手</div>
+                    <div class="card-body">
+                        <p class="text-muted mb-0" th:if="${#lists.isEmpty(recipients)}" th:text="#{W2701}">
+                            通知できる人がいません。</p>
+                        <ul class="list-group list-group-flush" th:unless="${#lists.isEmpty(recipients)}">
+                            <li class="list-group-item d-flex align-items-center gap-2" th:each="r : ${recipients}">
+                                <span th:text="${r.name}">山田 太郎</span>
+                                <span class="badge bg-secondary" th:if="${r.trainee}">研修中</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <button type="submit" class="btn btn-danger"
+                            th:data-confirm="#{C2701(${#lists.size(recipients)})}">登録して通知する</button>
+                    <a class="btn btn-outline-secondary" th:href="@{/manager/absences(date=${target.workDate})}">戻る</a>
+                </div>
+            </form>
+        </th:block>
+
+        <!-- ① 日付と人を選ぶ（20-SM-07 1.1） -->
+        <th:block th:unless="${target != null}">
+            <form th:action="@{/manager/absences}" method="get" class="mb-4">
+                <label for="date" class="form-label fw-bold">日付</label>
+                <input type="date" id="date" name="date" th:value="${date}" th:min="${today}"
+                       class="form-control absence-date" data-auto-submit>
+            </form>
+
+            <div class="card mb-4">
+                <div class="card-header fw-bold" th:text="|${dateLabel} の出勤者|">11月10日(火) の出勤者</div>
+                <div class="card-body">
+                    <p class="text-muted mb-0" th:if="${#lists.isEmpty(candidatesOfDay)}" th:text="#{I2701}">
+                        この日に公開済みのシフトはありません。</p>
+                    <div class="table-responsive" th:unless="${#lists.isEmpty(candidatesOfDay)}">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>枠</th>
+                                    <th>氏名</th>
+                                    <th><span class="visually-hidden">操作</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="row : ${candidatesOfDay}">
+                                    <td class="text-nowrap" th:text="${row.slotLabel}">☀日勤</td>
+                                    <td th:text="${row.staffName}">山田 太郎</td>
+                                    <td class="text-end">
+                                        <a class="btn btn-outline-danger btn-sm"
+                                           th:href="@{/manager/absences(assignmentId=${row.assignmentId})}">この人を欠勤にする</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4" th:unless="${#lists.isEmpty(absentsOfDay)}">
+                <div class="card-header fw-bold">すでに欠勤の人</div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>枠</th>
+                                    <th>氏名</th>
+                                    <th>登録日時</th>
+                                    <th>通知日時</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="row : ${absentsOfDay}">
+                                    <td class="text-nowrap" th:text="${row.slotLabel}">☀日勤</td>
+                                    <td th:text="${row.staffName}">山田 太郎</td>
+                                    <td class="text-nowrap" th:text="${row.registeredAtLabel}">2026/11/10 09:00</td>
+                                    <td class="text-nowrap" th:text="${row.notifiedAtLabel}">2026/11/10 09:00</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </th:block>
+    </main>
+</body>
+</html>

@@ -727,6 +727,17 @@ body {
 
 /* ===== SM-07 欠勤登録（川端） ===== */
 
+/* 日付の入力欄は、広い画面で幅いっぱいに伸ばさない */
+.absence-date {
+    max-width: 240px;
+}
+
+@media (max-width: 767.98px) {
+    .absence-date {
+        max-width: none;
+    }
+}
+
 /* ===== SM-08 印刷用シフト表（栗原） ===== */
 /* 印刷の形：A4横。9pt、行の高さ6mm（20-SM-08 1章） */
 @page {
