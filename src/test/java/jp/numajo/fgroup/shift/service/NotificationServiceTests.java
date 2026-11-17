@@ -3,6 +3,7 @@ package jp.numajo.fgroup.shift.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -34,6 +35,9 @@ import jp.numajo.fgroup.shift.entity.Slot;
 import jp.numajo.fgroup.shift.entity.User;
 import jp.numajo.fgroup.shift.exception.ResourceNotFoundException;
 import jp.numajo.fgroup.shift.repository.NotificationRepository;
+import jp.numajo.fgroup.shift.repository.NotificationSettingRepository;
+import jp.numajo.fgroup.shift.repository.RequestSubmissionRepository;
+import jp.numajo.fgroup.shift.repository.ShiftPeriodRepository;
 import jp.numajo.fgroup.shift.repository.UserRepository;
 
 /**
@@ -75,7 +79,9 @@ class NotificationServiceTests {
         messageSource.setBasename("messages");
         messageSource.setDefaultEncoding(StandardCharsets.UTF_8.name());
         service = new NotificationService(notificationRepository, userRepository, messageSource,
-                Clock.fixed(Instant.parse("2026-10-16T00:00:00Z"), ZoneId.of("Asia/Tokyo")));
+                Clock.fixed(Instant.parse("2026-10-16T00:00:00Z"), ZoneId.of("Asia/Tokyo")),
+                mock(ShiftPeriodRepository.class), mock(NotificationSettingRepository.class),
+                mock(RequestSubmissionRepository.class));
     }
 
     private static User user(long id, String name, Role role) {
