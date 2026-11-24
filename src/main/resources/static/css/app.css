@@ -916,4 +916,15 @@ body {
 
 /* ===== SA-04 バックアップ（新井） ===== */
 
+/* 履歴の結果（20-SA-04 1章 No.3：成功＝緑、失敗＝赤） */
+.backup-success {
+    color: var(--color-day);
+    font-weight: bold;
+}
+
+.backup-failed {
+    color: var(--color-absent);
+    font-weight: bold;
+}
+
 /* ===== ER-01・ER-02 エラー（新井） ===== */

@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-05 |
-| 版 | 第1.10版（令和8年11月17日） |
+| 版 | 第1.11版（令和8年11月24日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -21,6 +21,7 @@
 | 1.8 | 令和8年11月9日 | 日付の表示の直し（PR #60）に合わせた：2.3 に ShiftTableService#toDayColumn（static）を足した | 新井 |
 | 1.9 | 令和8年11月11日 | コードと設計書の再チェックを反映：1.3 NotificationSettingService の依存から使っていない UserRepository を外し、save は null の値も E1501 にすると書いた（PR #27）。2.3 ShiftTableService の依存に ShiftPeriodRepository・Clock、メソッドに findPublishedPeriods・choosePeriod を足した（PR #50。Controller が Repository を直接呼ばないため） | 新井 |
 | 1.10 | 令和8年11月17日 | BT-03 の実装に合わせた：1.2 NotificationService の依存に ShiftPeriodRepository・NotificationSettingRepository・RequestSubmissionRepository を足した（95_通知・定期処理設計書 4.2 の手順で使う） | 新井 |
+| 1.11 | 令和8年11月24日 | SA-02 の実装中に見つかった不足を直した：4.1 ManagerAccountService に getName を足した（停止の I4204・初期化の I4203 に出す氏名を Controller が取るため） | 新井 |
 
 ## 0. service の決まり
 
@@ -284,6 +285,7 @@
 | `List<ManagerRow> findAll()` | 読取 | 20-SA-02 2.1 |
 | `ManagerCountView count()` | 読取 | 20-SA-01 2.1-1 |
 | `String create(ManagerForm form, Long operatorId)` | 更新 | 20-SA-02 2.2。戻り値は初期パスワード |
+| `String getName(Long id)` | 読取 | 20-SA-02 2.3・2.5（氏名を返す。ない・MANAGER でない → 404） |
 | `void stop(Long id, Long operatorId)` | 更新 | 20-SA-02 2.3 |
 | `void resume(Long id, Long operatorId)` | 更新 | 20-SA-02 2.4 |
 | `String resetPassword(Long id, Long operatorId)` | 更新 | 20-SA-02 2.5 |
