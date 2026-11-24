@@ -103,7 +103,8 @@
                                 <td>
                                     <span class="badge" th:text="${row.period.status.label}"
                                           th:classappend="${row.period.status.name() == 'OPEN'} ? 'text-bg-info'
-                                              : (${row.period.status.name() == 'CLOSED'} ? 'text-bg-warning' : 'text-bg-success')">受付中</span>
+                                              : (${row.period.status.name() == 'CLOSED'} ? 'text-bg-warning'
+                                              : 'text-bg-success')">受付中</span>
                                 </td>
                                 <td class="text-nowrap" th:text="|${row.submitted}人／${row.total}人|">12人／20人</td>
                                 <td class="text-end">

@@ -123,8 +123,8 @@ class ManagerHomeFlowTests {
     private void required(int day, int slotId, int count) {
         LocalDate d = today.plusDays(day);
         jdbcTemplate.update("DELETE FROM required_staff_overrides WHERE work_date = ? AND slot_id = ?", d, slotId);
-        jdbcTemplate.update("INSERT INTO required_staff_overrides (work_date, slot_id, required_count) VALUES (?, ?, ?)",
-                d, slotId, count);
+        jdbcTemplate.update("INSERT INTO required_staff_overrides (work_date, slot_id, required_count) "
+                + "VALUES (?, ?, ?)", d, slotId, count);
     }
 
     private long assign(long periodId, User u, int day, Integer slotId, String start, String end, String status) {
