@@ -226,7 +226,8 @@ class AdminLogFlowTests {
 
         assertThat(logs(result).getContent()).extracting(OperationLogRow::target).containsExactly("両方に合う");
         assertThat(html(result))
-                .containsPattern("<option value=\"" + adminId + "\"\\s+selected=\"selected\">テストlgadmin（lgadmin・管理者）</option>")
+                .containsPattern("<option value=\"" + adminId
+                        + "\"\\s+selected=\"selected\">テストlgadmin（lgadmin・管理者）</option>")
                 .containsPattern("<option value=\"SHIFT_PUBLISH\"\\s+selected=\"selected\">シフトの公開</option>")
                 .contains("シフトの公開", "テストlgadmin");
     }
