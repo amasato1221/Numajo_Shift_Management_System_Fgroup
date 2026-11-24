@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,10 +32,12 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.springframework.boot.test.system.OutputCaptureExtension;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jp.numajo.fgroup.shift.config.AppProperties;
 import jp.numajo.fgroup.shift.constant.BackupStatus;
 import jp.numajo.fgroup.shift.dto.BackupResult;
@@ -51,7 +54,8 @@ import jp.numajo.fgroup.shift.util.ProcessRunner;
  *
  * <p>
  * ProcessRunner（ProcessBuilder を包んだクラス）をモックにし、mysqldump の代わりにテストの中でファイルを作る。
- * 保存先は JUnit の一時フォルダを使う。本物の mysqldump での作成（No.1）と復元（No.7）は、Windows の PC で手で確かめる。
+ * 保存先は JUnit の一時フォルダを使う。ログは Logback の ListAppender で受け取って確かめる
+ * （コンソールの出力を見ると、Windows ではコンソールの文字コードが MS932 になり日本語が一致しないため）。本物の mysqldump での作成（No.1）と復元（No.7）は、Windows の PC で手で確かめる。
  * </p>
  *
  * <pre>
@@ -77,7 +81,7 @@ import jp.numajo.fgroup.shift.util.ProcessRunner;
  * A が偽のときは短絡評価で B を見ないが、組み合わせとしてテストする。
  * </pre>
  */
-@ExtendWith({ MockitoExtension.class, OutputCaptureExtension.class })
+@ExtendWith(MockitoExtension.class)
 class BackupServiceTests {
 
     private static final String PASSWORD = "secret-pw-123";
@@ -100,8 +104,14 @@ class BackupServiceTests {
     private DataSourceProperties dataSourceProperties;
     private BackupService service;
 
+    /** BackupService のログを受け取る */
+    private ListAppender<ILoggingEvent> logs;
+
     @BeforeEach
     void setUp() {
+        logs = new ListAppender<>();
+        logs.start();
+        ((Logger) LoggerFactory.getLogger(BackupService.class)).addAppender(logs);
         props = new AppProperties();
         props.getBackup().setMysqldumpPath(DUMP_PATH);
         props.getBackup().setDir(tempDir.resolve("backup").toString());
@@ -116,7 +126,17 @@ class BackupServiceTests {
                 clock);
     }
 
+    @AfterEach
+    void tearDown() {
+        ((Logger) LoggerFactory.getLogger(BackupService.class)).detachAppender(logs);
+    }
+
     // ---------------------------------------------------------------- 部品
+
+    /** 受け取ったログ（引数を埋めたもの）を1つの文字列にする。 */
+    private String logText() {
+        return String.join("\n", logs.list.stream().map(ILoggingEvent::getFormattedMessage).toList());
+    }
 
     private Path backupFile() {
         return tempDir.resolve("backup").resolve(FILE_NAME);
@@ -317,7 +337,7 @@ class BackupServiceTests {
     }
 
     @Test
-    void 途中のファイルを消せない_ログに出してFAILEDを記録する(CapturedOutput output) {
+    void 途中のファイルを消せない_ログに出してFAILEDを記録する() {
         // 結果のファイルの場所に中身のあるフォルダができていると、deleteIfExists が例外になる
         when(processRunner.run(any(), any(), any())).thenAnswer(inv -> {
             Files.createDirectories(backupFile());
@@ -327,17 +347,17 @@ class BackupServiceTests {
 
         assertThat(service.create(1L).status()).isEqualTo(BackupStatus.FAILED);
         verify(backupRecorder).record(FILE_NAME, null, BackupStatus.FAILED, 1L);
-        assertThat(output).contains("途中までのバックアップのファイルを消せませんでした");
+        assertThat(logText()).contains("途中までのバックアップのファイルを消せませんでした");
     }
 
     @Test
-    void 失敗したときのログ_出力の先頭200文字だけでパスワードは出ない_No8(CapturedOutput output) {
+    void 失敗したときのログ_出力の先頭200文字だけでパスワードは出ない_No8() {
         String longOutput = "E".repeat(200) + "TAIL";
         dumpWrites(null, new ProcessResult(2, false, longOutput));
 
         service.create(1L);
 
-        assertThat(output).contains("バックアップに失敗しました（終了コード 2、時間切れ false）：" + "E".repeat(200))
+        assertThat(logText()).contains("バックアップに失敗しました（終了コード 2、時間切れ false）：" + "E".repeat(200))
                 .doesNotContain("TAIL").doesNotContain(PASSWORD);
     }
 
