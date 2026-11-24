@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-07 |
-| 版 | 第1.5版（令和8年11月11日） |
+| 版 | 第1.6版（令和8年11月24日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -16,6 +16,7 @@
 | 1.3 | 令和8年11月9日 | 日付の表示の統一（10_基本設計書 5.3 第1.4版）：3章の「テンプレートで `#temporals.format` を使ってよい」を削除し、日付型の項目には表示用の `〜Label` を必ず並べる決まりにした。4章の dto に `〜Label` を追加し、日付の列を表す `DayColumn` を新しく作った（`ShiftTable`・`AssignmentMatrix` の `days`） | 新井 |
 | 1.4 | 令和8年11月9日 | SelectOption を時刻プルダウンにも使うことを書いた（`ShiftTimeUtil#timeSelectOptions()`） | 新井 |
 | 1.5 | 令和8年11月11日 | コードと設計書の再チェックを反映：ShiftTable に、スマホの日付ごとの一覧で使うメソッド namesOn を書いた（PR #50） | 新井 |
+| 1.6 | 令和8年11月24日 | SM-01 の実装前の確認を反映：ShortageView の slotName をアイコン付きにした。VacancyView に hasCount を追加し、slotLabel・notifiedAt の中身を書いた | 新井 |
 
 ## 1. form の決まり
 
@@ -105,8 +106,8 @@ public class SkillForm {
 | `ChatMessageView` | `Long id, String senderName, String body, LocalDateTime createdAt, String createdAtLabel, boolean mine`（`createdAtLabel`＝日時（短い）） | `ChatService` |
 | `ChatListRow` | `Long staffId, String initial, String staffName, boolean active, String lastBody, LocalDateTime lastAt, String lastAtLabel, long unreadCount`（`lastAtLabel`＝今日なら時刻、今年なら日付（短い）、それより前は日付（短い・年付き）。20-SM-10） | `ChatService` |
 | `SubmissionStatusView` | `PeriodOption period, int submitted, int total, List<String> unsubmittedNames` | `DashboardService` |
-| `ShortageView` | `Long periodId, LocalDate workDate, String workDateLabel, String slotName, int assigned, int required`（`workDateLabel`＝日付（月日と曜日）） | `DashboardService` |
-| `VacancyView` | `LocalDate workDate, String workDateLabel, String slotLabel, String staffName, LocalDateTime notifiedAt, String notifiedAtLabel, int assigned, int required`（`workDateLabel`＝日付（月日と曜日）、`notifiedAtLabel`＝日時（短い）） | `DashboardService` |
+| `ShortageView` | `Long periodId, LocalDate workDate, String workDateLabel, String slotName, int assigned, int required`（`workDateLabel`＝日付（月日と曜日）、`slotName`＝アイコン付きの枠名（☀日勤・☾夕勤）） | `DashboardService` |
+| `VacancyView` | `LocalDate workDate, String workDateLabel, String slotLabel, String staffName, LocalDateTime notifiedAt, String notifiedAtLabel, boolean hasCount, int assigned, int required`（`workDateLabel`＝日付（月日と曜日）、`slotLabel`＝☀日勤・☾夕勤、時間指定は「時間指定 13:00〜22:00」、`notifiedAt`・`notifiedAtLabel`＝日時（短い）。通知していなければ null、`hasCount`＝人数を出すか（時間指定でどの枠とも重ならなければ false、そのとき `assigned`・`required` は 0）） | `DashboardService` |
 | `PeriodRowView` | `PeriodOption period, int submitted, int total` | `DashboardService` |
 | `DashboardView` | `List<SubmissionStatusView> submissionStatuses, List<ShortageView> shortages, int moreShortages, List<VacancyView> vacancies, List<PeriodRowView> periods` | `DashboardService` |
 | `StaffRowView` | `Long id, String name, String nameKana, String loginId, List<String> skillNames, boolean trainee, boolean active, boolean locked`（`skillNames` は職能名の順） | `StaffService` |
