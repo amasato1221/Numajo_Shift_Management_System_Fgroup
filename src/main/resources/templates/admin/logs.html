@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='logs'">
+<head>
+    <title>操作ログ</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <h1 class="h4 mb-3">操作ログ</h1>
+
+    <!-- 検索条件（20-SA-03 1.1）。検索ボタンでは page を送らないので 0 に戻る -->
+    <form method="get" th:action="@{/admin/logs}" th:object="${logSearchForm}" class="row g-2 mb-3">
+        <div class="col-6 col-md-auto">
+            <label for="from" class="form-label small mb-1">期間（から）</label>
+            <input type="date" id="from" name="from" class="form-control" th:value="*{from}">
+        </div>
+        <div class="col-6 col-md-auto">
+            <label for="to" class="form-label small mb-1">期間（まで）</label>
+            <input type="date" id="to" name="to" class="form-control" th:value="*{to}">
+        </div>
+        <div class="col-12 col-md">
+            <label for="userId" class="form-label small mb-1">利用者</label>
+            <select id="userId" name="userId" class="form-select">
+                <option value="">すべて</option>
+                <option th:each="opt : ${userOptions}" th:value="${opt.value}" th:text="${opt.label}"
+                        th:selected="${opt.value == #strings.toString(logSearchForm.userId)}">新井 正人（arai・管理者）</option>
+            </select>
+        </div>
+        <div class="col-12 col-md">
+            <label for="action" class="form-label small mb-1">操作</label>
+            <select id="action" name="action" class="form-select">
+                <option value="">すべて</option>
+                <option th:each="opt : ${actionOptions}" th:value="${opt.value}" th:text="${opt.label}"
+                        th:selected="${logSearchForm.action != null and opt.value == logSearchForm.action.name()}">ログイン</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-auto d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary w-100">検索</button>
+        </div>
+    </form>
+
+    <p class="text-muted" th:if="${logs.totalElements > 0}"
+       th:text="|${logs.totalElements}件中 ${logs.number * logs.size + 1}〜${logs.number * logs.size + logs.numberOfElements}件|">123件中 1〜50件</p>
+
+    <p th:if="${logs.totalElements == 0}" th:text="#{I4301}">該当する操作ログはありません。</p>
+
+    <div class="table-responsive" th:if="${logs.totalElements > 0}">
+        <table class="table table-sm table-hover align-middle log-table">
+            <thead>
+            <tr>
+                <th class="text-nowrap">日時</th>
+                <th class="text-nowrap">利用者</th>
+                <th class="text-nowrap">操作</th>
+                <th class="log-target">対象</th>
+                <th class="log-detail">内容</th>
+                <th class="text-nowrap">IPアドレス</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${logs.content}">
+                <td class="text-nowrap" th:text="${row.createdAtLabel}">2026/10/22 09:05:31</td>
+                <td class="text-nowrap" th:text="${row.userName}">新井 正人</td>
+                <td class="text-nowrap" th:text="${row.actionLabel}">ログイン</td>
+                <td class="log-target text-break" th:text="${row.target}">users:12</td>
+                <td class="log-detail text-break" th:text="${row.detail}">内容</td>
+                <td class="text-nowrap" th:text="${row.ipAddress}">127.0.0.1</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ページ送り（20-SA-03 1.2 No.8）。リンクは今の検索条件を引き継ぐ -->
+    <nav aria-label="ページ送り" th:if="${logs.totalPages > 1}">
+        <ul class="pagination flex-wrap">
+            <li class="page-item" th:classappend="${logs.first} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/logs(from=${logSearchForm.from},to=${logSearchForm.to},userId=${logSearchForm.userId},action=${logSearchForm.action},page=${logs.number - 1})}">前へ</a>
+            </li>
+            <li class="page-item" th:each="i : ${#numbers.sequence(0, logs.totalPages - 1)}"
+                th:classappend="${i == logs.number} ? 'active'">
+                <a class="page-link" th:text="${i + 1}"
+                   th:href="@{/admin/logs(from=${logSearchForm.from},to=${logSearchForm.to},userId=${logSearchForm.userId},action=${logSearchForm.action},page=${i})}">1</a>
+            </li>
+            <li class="page-item" th:classappend="${logs.last} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/logs(from=${logSearchForm.from},to=${logSearchForm.to},userId=${logSearchForm.userId},action=${logSearchForm.action},page=${logs.number + 1})}">次へ</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+</body>
+</html>
