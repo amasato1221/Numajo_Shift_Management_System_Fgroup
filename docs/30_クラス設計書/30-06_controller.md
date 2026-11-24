@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-06 |
-| 版 | 第1.4版（令和8年11月11日） |
+| 版 | 第1.5版（令和8年11月24日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -15,6 +15,7 @@
 | 1.2 | 令和8年11月5日 | 2章：SB-04 の allShifts を StaffShiftController から StaffAllShiftController（`/staff/all-shifts`）に移した（SB-02 と持ち主が違うため。98 第1.8版） | 新井 |
 | 1.3 | 令和8年11月6日 | 2章：SB-01 の実装（PR #49）に合わせ、今月を `YearMonth.now(clock)` で決めるため StaffHomeController が Clock も受け取ることを書いた | 新井 |
 | 1.4 | 令和8年11月11日 | コードと設計書の再チェックを反映：0章の `@RequiredArgsConstructor` は依存があるときだけ付けると書いた。5章の 404 にする例外を、30-08 の全文・10_基本設計書 5.5 と同じ5つにした | 新井 |
+| 1.5 | 令和8年11月24日 | SA-03 の実装（PR #82）に合わせ、4章の AdminLogController が Clock も受け取ること（既定の日付）と、操作のプルダウンを定数 ACTION_OPTIONS で持つことを書いた | 新井 |
 
 ## 0. controller の決まり
 
@@ -174,7 +175,7 @@ public class GlobalModelAdvice {
 | 〃 | `stop` | POST `/{id}/stop` | `Long id, LoginUser, RedirectAttributes` | 20-SA-02 2.3 |
 | 〃 | `resume` | POST `/{id}/resume` | `Long id, LoginUser, RedirectAttributes` | 20-SA-02 2.4 |
 | 〃 | `resetPassword` | POST `/{id}/reset-password` | `Long id, LoginUser, RedirectAttributes` | 20-SA-02 2.5 |
-| `AdminLogController`（`/admin/logs`） | `list` | GET | `LogSearchForm, BindingResult, Model`（`@Validated` は付けない。型の合わない値で出た `BindingResult` のエラーは無視する） | 20-SA-03 2.1 |
+| `AdminLogController`（`/admin/logs`） | `list` | GET | `LogSearchForm, BindingResult, Model`（`@Validated` は付けない。型の合わない値で出た `BindingResult` のエラーは無視する）。依存：`OperationLogService`、`Clock`（今日を `LocalDate.now(clock)` で決める）。操作のプルダウンは定数 `ACTION_OPTIONS` | 20-SA-03 2.1 |
 | `AdminBackupController`（`/admin/backups`） | `list` | GET | `Model` | 20-SA-04 2.1 |
 | 〃 | `create` | POST | `LoginUser, RedirectAttributes` | 20-SA-04 2.2 |
 

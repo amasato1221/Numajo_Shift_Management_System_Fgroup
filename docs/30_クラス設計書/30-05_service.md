@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書番号 | 30-05 |
-| 版 | 第1.11版（令和8年11月24日） |
+| 版 | 第1.12版（令和8年11月24日） |
 | 対象読者 | 実装をする班員 |
 
 ## 改版履歴
@@ -22,6 +22,7 @@
 | 1.9 | 令和8年11月11日 | コードと設計書の再チェックを反映：1.3 NotificationSettingService の依存から使っていない UserRepository を外し、save は null の値も E1501 にすると書いた（PR #27）。2.3 ShiftTableService の依存に ShiftPeriodRepository・Clock、メソッドに findPublishedPeriods・choosePeriod を足した（PR #50。Controller が Repository を直接呼ばないため） | 新井 |
 | 1.10 | 令和8年11月17日 | BT-03 の実装に合わせた：1.2 NotificationService の依存に ShiftPeriodRepository・NotificationSettingRepository・RequestSubmissionRepository を足した（95_通知・定期処理設計書 4.2 の手順で使う） | 新井 |
 | 1.11 | 令和8年11月24日 | SA-02 の実装中に見つかった不足を直した：4.1 ManagerAccountService に getName を足した（停止の I4204・初期化の I4203 に出す氏名を Controller が取るため） | 新井 |
+| 1.12 | 令和8年11月24日 | SA-03 の実装（PR #82）に合わせた：4.2 OperationLogService に userOptions を足し、依存から Clock を外した（既定の日付は AdminLogController が決める） | 新井 |
 
 ## 0. service の決まり
 
@@ -292,7 +293,7 @@
 
 ### 4.2 `OperationLogService`
 
-全文は 30-04 の5章。次のメソッドを足します。依存：`OperationLogRepository`、`UserRepository`、`Clock`
+全文は 30-04 の5章。次のメソッドを足します。依存：`OperationLogRepository`、`UserRepository`（SA-03 の既定の日付は `AdminLogController` が `Clock` で決めるので、このクラスは `Clock` を持たない）
 
 | メソッド | Tx | 手順 |
 | --- | --- | --- |
@@ -300,6 +301,7 @@
 | `void recordInNewTransaction(Long userId, OperationAction action, String target, String detail)` | 新規 | 30-04 |
 | `Page<OperationLogRow> search(LogSearchForm form, Pageable pageable)` | 読取 | 20-SA-03 2.1 |
 | `List<OperationLogRow> findRecent(int limit)` | 読取 | 20-SA-01（limit は 5 だけを使う。`findLatest5` を呼ぶ） |
+| `List<SelectOption> userOptions()` | 読取 | 20-SA-03 1.1 No.3（`UserRepository#findAllForOptions()`。値＝ID、表示「氏名（ログインID・役割）」、役割は 管理者／店長／バイト） |
 
 「新規」は `Propagation.REQUIRES_NEW`。
 
