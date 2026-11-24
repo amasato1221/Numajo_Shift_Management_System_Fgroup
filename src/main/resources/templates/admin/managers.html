@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='managers'">
+<head>
+    <title>店長アカウント管理</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <h1 class="h4 mb-3">店長アカウント管理</h1>
+
+    <!-- 初期パスワード（作成・初期化の直後に1回だけ。リロードすると消える） -->
+    <div class="alert alert-success" role="alert" th:if="${initialPassword != null}"
+         th:text="#{I4203(${initialPasswordName}, ${initialPassword})}"></div>
+
+    <!-- 一覧 -->
+    <p th:if="${#lists.isEmpty(managers)}" th:text="#{I4201}">店長アカウントはまだありません。</p>
+
+    <div class="table-responsive mb-4" th:unless="${#lists.isEmpty(managers)}">
+        <table class="table table-hover align-middle text-nowrap">
+            <thead>
+            <tr>
+                <th>氏名</th>
+                <th>ログインID</th>
+                <th>状態</th>
+                <th>ロック</th>
+                <th>作成日</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${managers}">
+                <td th:text="${row.name}">山田 店長</td>
+                <td th:text="${row.loginId}">tencho</td>
+                <td>
+                    <span class="badge text-bg-success" th:if="${row.active}">有効</span>
+                    <span class="badge text-bg-secondary" th:unless="${row.active}">停止</span>
+                </td>
+                <td><span class="badge text-bg-danger" th:if="${row.locked}">ロック中</span></td>
+                <td th:text="${row.createdAtLabel}">2026年10月21日</td>
+                <td>
+                    <div class="d-flex flex-wrap gap-1">
+                        <!-- 停止（有効な人だけ。有効な店長が0人になるときは C4203） -->
+                        <form th:if="${row.active}" th:action="@{/admin/managers/{id}/stop(id=${row.id})}"
+                              method="post">
+                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                    th:data-confirm="${row.lastActive} ? #{C4203} : #{C4201(${row.name})}">停止</button>
+                        </form>
+                        <!-- 再開（停止中の人だけ） -->
+                        <form th:unless="${row.active}" th:action="@{/admin/managers/{id}/resume(id=${row.id})}"
+                              method="post">
+                            <button type="submit" class="btn btn-outline-primary btn-sm">再開</button>
+                        </form>
+                        <!-- パスワード初期化（ロックの解除も兼ねる） -->
+                        <form th:action="@{/admin/managers/{id}/reset-password(id=${row.id})}" method="post">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                    th:data-confirm="#{C4202(${row.name})}">パスワード初期化</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 作成フォーム -->
+    <div class="card">
+        <div class="card-body">
+            <h2 class="h5 card-title">店長アカウントの作成</h2>
+            <form th:action="@{/admin/managers}" th:object="${managerForm}" method="post">
+                <div class="mb-3">
+                    <label for="name" class="form-label">氏名</label>
+                    <input type="text" id="name" th:field="*{name}" class="form-control" maxlength="50"
+                           placeholder="山田 店長">
+                    <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="nameKana" class="form-label">ふりがな（任意）</label>
+                    <input type="text" id="nameKana" th:field="*{nameKana}" class="form-control" maxlength="50"
+                           placeholder="やまだ てんちょう">
+                    <div class="text-danger small" th:if="${#fields.hasErrors('nameKana')}" th:errors="*{nameKana}"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="loginId" class="form-label">ログインID</label>
+                    <input type="text" id="loginId" th:field="*{loginId}" class="form-control" maxlength="20"
+                           autocomplete="off">
+                    <div class="form-text">大文字・小文字は区別しません（<code>Tencho</code> と <code>tencho</code> は同じIDとして扱います）</div>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('loginId')}" th:errors="*{loginId}"></div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">作成</button>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
