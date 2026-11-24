@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}"
+      th:with="menu='backups'">
+<head>
+    <title>バックアップ</title>
+</head>
+<body>
+    <main layout:fragment="content">
+        <h1 class="h4 mb-4">バックアップ</h1>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <!-- 1 保存先 -->
+                <p class="mb-3" th:text="|保存先：${backupDir}|">保存先：C:/shift-management/backup</p>
+                <!-- 2 バックアップを作る（確認を出し、押したら二重に押せないようにする） -->
+                <form th:action="@{/admin/backups}" method="post">
+                    <button type="submit" class="btn btn-success" th:data-confirm="#{C4401}"
+                            data-once>バックアップを作る</button>
+                </form>
+            </div>
+        </div>
+
+        <h2 class="h5 mb-3">履歴</h2>
+        <!-- 4 0件 -->
+        <p th:if="${#lists.isEmpty(backups)}" th:text="#{I4401}">バックアップはまだありません。</p>
+
+        <!-- 3 履歴（新しい50件） -->
+        <div class="card mb-4" th:unless="${#lists.isEmpty(backups)}">
+            <div class="table-responsive">
+                <table class="table mb-0 backups-table">
+                    <thead>
+                        <tr>
+                            <th>日時</th>
+                            <th>ファイル名</th>
+                            <th class="text-end">大きさ</th>
+                            <th>結果</th>
+                            <th>作った人</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="row : ${backups}">
+                            <td class="text-nowrap" th:text="${row.createdAtLabel}">2026/10/20 18:40</td>
+                            <td th:text="${row.fileName}">backup_20261020_184012.sql</td>
+                            <td class="text-end text-nowrap" th:text="${row.sizeText()}">1234.5 KB</td>
+                            <td>
+                                <span th:if="${row.status.name() == 'SUCCESS'}" class="backup-success">成功</span>
+                                <span th:unless="${row.status.name() == 'SUCCESS'}" class="backup-failed">失敗</span>
+                            </td>
+                            <td th:text="${row.createdByName}">システム管理者</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5 戻し方の説明（コマンドは 96_環境構築手順書 7章の手順3と同じにする） -->
+        <details>
+            <summary>元に戻すとき</summary>
+            <p class="mt-2 mb-1">元に戻すときは、新井のPCで 96_環境構築手順書 7章の手順で行います。先にアプリを止め、PowerShell ではなくコマンドプロンプト（cmd）で次を実行します：</p>
+            <p class="mb-0"><code class="d-block text-break">"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" -u root -p --default-character-set=utf8mb4 shift_management &lt; ファイル名</code></p>
+        </details>
+    </main>
+</body>
+</html>
